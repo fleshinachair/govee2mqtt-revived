@@ -351,11 +351,7 @@ impl SceneInfoSensor {
 
 #[async_trait]
 impl EntityInstance for SceneInfoSensor {
-    async fn publish_config(
-        &self,
-        state: &StateHandle,
-        client: &HassClient,
-    ) -> anyhow::Result<()> {
+    async fn publish_config(&self, state: &StateHandle, client: &HassClient) -> anyhow::Result<()> {
         self.sensor.publish(state, client).await?;
 
         // Publish scene catalog as retained MQTT message during registration (once),
