@@ -552,6 +552,9 @@ fn merge_iot_packet(device: &mut Device, sku: &str, packet: &Packet) {
             let decoded = cmd.decode_for_sku(sku);
             log::debug!("Decoded: {decoded:?} for {sku}");
             match decoded {
+                GoveeBlePacket::NotifyElementState(params) => {
+                    device.set_element_state(params);
+                }
                 GoveeBlePacket::NotifyHumidifierNightlight(nl) => {
                     state.brightness = nl.brightness;
                     state.color = DeviceColor {
@@ -573,6 +576,7 @@ fn merge_iot_packet(device: &mut Device, sku: &str, packet: &Packet) {
                     // Ignore packets that we can't decode
                 }
                 GoveeBlePacket::SetHumidifierMode(_)
+                | GoveeBlePacket::SetElementToggle(_)
                 | GoveeBlePacket::SetHumidifierNightlight(_) => {
                     // Ignore packets that are essentially echoing
                     // commands sent to the device

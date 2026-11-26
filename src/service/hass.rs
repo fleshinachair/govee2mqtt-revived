@@ -1111,6 +1111,24 @@ struct IdAndInst {
     instance: String,
 }
 
+/// Govee reports no state for most toggles, so assume a command took effect. A
+/// real value from a later poll or push still overrides it.
+async fn publish_assumed_toggle_state(
+    state: &StateHandle,
+    device: &ServiceDevice,
+    instance: &str,
+    on: bool,
+) -> anyhow::Result<()> {
+    if let Some(hass) = state.get_hass_client().await {
+        hass.publish(
+            switch_instance_state_topic(device, instance),
+            if on { "ON" } else { "OFF" },
+        )
+        .await?;
+    }
+    Ok(())
+}
+
 async fn mqtt_switch_command(
     Payload(command): Payload<String>,
     Params(IdAndInst { id, instance }): Params<IdAndInst>,
@@ -1127,18 +1145,18 @@ async fn mqtt_switch_command(
 
     if instance == "powerSwitch" {
         state.device_power_on(&device, on).await?;
+    } else if matches!(
+        instance.as_str(),
+        "mainLightToggle" | "backgroundLightToggle"
+    ) {
+        state
+            .device_set_element_toggle(&device, &instance, on)
+            .await?;
+        publish_assumed_toggle_state(&state, &device, &instance, on).await?;
     } else if let Some(client) = state.get_platform_client().await {
         if let Some(http_dev) = &device.http_device_info {
             client.set_toggle_state(http_dev, &instance, on).await?;
-            // Govee reports no state for these toggles, so assume the command
-            // took effect. A real value from a later poll still overrides it.
-            if let Some(hass) = state.get_hass_client().await {
-                hass.publish(
-                    switch_instance_state_topic(&device, &instance),
-                    if on { "ON" } else { "OFF" },
-                )
-                .await?;
-            }
+            publish_assumed_toggle_state(&state, &device, &instance, on).await?;
         } else {
             anyhow::bail!("No platform state available to set {id} {instance} to {on}");
         }
