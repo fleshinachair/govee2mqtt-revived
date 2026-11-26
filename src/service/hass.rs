@@ -920,6 +920,15 @@ async fn mqtt_switch_command(
     } else if let Some(client) = state.get_platform_client().await {
         if let Some(http_dev) = &device.http_device_info {
             client.set_toggle_state(http_dev, &instance, on).await?;
+            // Govee reports no state for these toggles, so assume the command
+            // took effect. A real value from a later poll still overrides it.
+            if let Some(hass) = state.get_hass_client().await {
+                hass.publish(
+                    switch_instance_state_topic(&device, &instance),
+                    if on { "ON" } else { "OFF" },
+                )
+                .await?;
+            }
         } else {
             anyhow::bail!("No platform state available to set {id} {instance} to {on}");
         }
