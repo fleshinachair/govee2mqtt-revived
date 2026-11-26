@@ -51,6 +51,11 @@ if bashio::config.has_value mqtt_password ; then
   export GOVEE_MQTT_PASSWORD="$(bashio::config mqtt_password)"
 fi
 
+if bashio::config.has_value hass_discovery_prefix ; then
+  GOVEE_HASS_DISCOVERY_PREFIX="$(bashio::config hass_discovery_prefix)"
+  export GOVEE_HASS_DISCOVERY_PREFIX
+fi
+
 if bashio::config.has_value debug_level ; then
   export RUST_LOG="$(bashio::config debug_level)"
 fi

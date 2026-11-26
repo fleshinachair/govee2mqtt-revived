@@ -5,6 +5,11 @@ configuration:
     description: >-
       Which temperature scale to display in Home Assistant.
       Enter "C" for Celsius or "F" for Fahrenheit.
+  hass_discovery_prefix:
+    name: Discovery Prefix
+    description: >-
+      Leave blank unless you changed the MQTT discovery prefix in Home
+      Assistant (default "homeassistant").
   govee_email:
     name: Govee Account Email
     description: >-

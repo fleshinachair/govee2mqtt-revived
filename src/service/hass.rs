@@ -328,8 +328,11 @@ pub struct HassArguments {
     #[arg(long, global = true)]
     mqtt_bind_address: Option<String>,
 
-    #[arg(long, global = true, default_value = "homeassistant")]
-    hass_discovery_prefix: String,
+    /// The MQTT discovery prefix configured in Home Assistant.
+    /// You may also set this via the GOVEE_HASS_DISCOVERY_PREFIX environment
+    /// variable. If unspecified, uses "homeassistant".
+    #[arg(long, global = true)]
+    hass_discovery_prefix: Option<String>,
 
     /// The temperature scale to use when showing temperature values as
     /// entities in home assistant. Can be either "C" or "F" for Celsius
@@ -378,6 +381,14 @@ impl HassArguments {
         }
     }
 
+    pub fn hass_discovery_prefix(&self) -> anyhow::Result<String> {
+        let prefix = match &self.hass_discovery_prefix {
+            Some(p) => Some(p.to_string()),
+            None => opt_env_var("GOVEE_HASS_DISCOVERY_PREFIX")?,
+        };
+        Ok(normalize_discovery_prefix(prefix.as_deref()))
+    }
+
     pub fn temperature_scale(&self) -> anyhow::Result<TemperatureScale> {
         match &self.temperature_scale {
             Some(s) => Ok(s.parse()?),
@@ -385,6 +396,17 @@ impl HassArguments {
                 Ok(opt_env_var("GOVEE_TEMPERATURE_SCALE")?.unwrap_or(TemperatureScale::Celsius))
             }
         }
+    }
+}
+
+/// A blank value means the default, and stray slashes would produce topics
+/// that Home Assistant does not watch.
+fn normalize_discovery_prefix(prefix: Option<&str>) -> String {
+    let prefix = prefix.unwrap_or_default().trim().trim_matches('/');
+    if prefix.is_empty() {
+        "homeassistant".to_string()
+    } else {
+        prefix.to_string()
     }
 }
 
@@ -1131,7 +1153,7 @@ pub async fn spawn_hass_integration(
         })
         .await;
 
-    let disco_prefix = args.hass_discovery_prefix.clone();
+    let disco_prefix = args.hass_discovery_prefix()?;
     state.set_hass_disco_prefix(disco_prefix).await;
 
     // Periodically re-assert our availability, so that a hass instance which
@@ -2028,5 +2050,18 @@ mod tests {
         let (tx, rx) = async_channel::unbounded::<Event>();
         drop(tx);
         assert!(matches!(next_mqtt_event(&rx, None).await, Ok(None)));
+    }
+}
+
+#[cfg(test)]
+mod discovery_prefix_test {
+    use super::normalize_discovery_prefix;
+
+    #[test]
+    fn blank_means_default_and_slashes_are_trimmed() {
+        assert_eq!(normalize_discovery_prefix(None), "homeassistant");
+        assert_eq!(normalize_discovery_prefix(Some("  ")), "homeassistant");
+        assert_eq!(normalize_discovery_prefix(Some("indigo/")), "indigo");
+        assert_eq!(normalize_discovery_prefix(Some("/ha/disco")), "ha/disco");
     }
 }

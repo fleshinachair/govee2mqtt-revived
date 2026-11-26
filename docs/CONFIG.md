@@ -150,6 +150,7 @@ app, leave these fields blank — they are filled in automatically.
 |`--mqtt-port`|`GOVEE_MQTT_PORT`|`mqtt_port`|`1883`|Port number of your MQTT broker|
 |`--mqtt-username`|`GOVEE_MQTT_USER`|`mqtt_username`|*(none)*|Username, if your broker requires authentication|
 |`--mqtt-password`|`GOVEE_MQTT_PASSWORD`|`mqtt_password`|*(none)*|Password, if your broker requires authentication|
+|`--hass-discovery-prefix`|`GOVEE_HASS_DISCOVERY_PREFIX`|`hass_discovery_prefix`|`homeassistant`|Must match the discovery prefix of Home Assistant's MQTT integration|
 
 ## Effects (Scenes)
 
