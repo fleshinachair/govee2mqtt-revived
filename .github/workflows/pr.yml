@@ -1,24 +1,44 @@
-name: PR
+name: Test
 
+# Called by build.yml for pull requests, main and release tags. Pushing the
+# community-revival branch runs only this, so nothing is published.
 on:
-  pull_request:
+  workflow_call:
+  workflow_dispatch:
+  push:
     branches:
-      - main
+      - community-revival
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
+  test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-    - uses: actions/checkout@v6
-    - name: Build
-      run: cargo build --all
-    - name: Run tests
-      run: cargo test --all -- --show-output
-    - name: Check formatting
-      run: cargo fmt --all -- --check
-
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run tests
+        run: cargo test --all --all-features
+      - name: Lint
+        run: cargo clippy --all-targets --all-features
+      # A release tag must be the name apply-tag.sh derives from its commit,
+      # because that is the image tag Supervisor will pull.
+      - name: Check the release tag name
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          ./scripts/apply-tag.sh
+          version="$(sed -n 's/^version: *"\([^"]*\)".*/\1/p' addon/config.yaml)"
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match derived version $version"
+            exit 1
+          fi
