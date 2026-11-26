@@ -1030,40 +1030,35 @@ async fn mqtt_light_segment_command(
     let command: HassLightCommand = from_json(&payload)?;
     log::info!("Command for {device} segment {segment}: {payload}");
 
-    if let Some(client) = state.get_platform_client().await {
-        let info = device
-            .http_device_info
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("HTTP device info is missing"))?;
-
-        log::info!("Using Platform API to control {device} segment");
-
-        if let Some(brightness) = command.brightness {
-            client
-                .set_segment_brightness(info, segment, brightness)
-                .await?;
-        } else if command.state == "OFF" {
-            // Do nothing here. We used to set brightness to zero,
-            // but it is problematic:
-            // * Some devices don't have a 0
-            // * Setting it to 0 will power up the rest of the device,
-            //   so if HASS is turning off all lights in an area, the
-            //   effect is that they will turn off and then immediate
-            //   on again when there are segments involved
-            // client.set_segment_brightness(&info, segment, 0).await?;
-        }
-        if let Some(color) = &command.color {
-            client
-                .set_segment_rgb(info, segment, color.r, color.g, color.b)
-                .await?;
-            // A solid per-segment color ends any scene the bridge had applied.
+    if command.state == "OFF" && device.supports_local_segments() {
+        // Black turns one panel off without affecting the others. Not sent to a
+        // light that is already off: the frame could wake it, for instance when
+        // a whole area is switched off.
+        if device.device_state().map(|s| s.on).unwrap_or(false) {
             state
-                .device_mut(&device.sku, &device.id)
-                .await
-                .set_active_scene(None);
+                .device_set_segment_rgb(&device, segment, 0, 0, 0)
+                .await?;
         }
-    } else {
-        anyhow::bail!("set segments for {device}: Platform API is not available");
+        return Ok(());
+    }
+
+    if let Some(brightness) = command.brightness {
+        state
+            .device_set_segment_brightness(&device, segment, brightness)
+            .await?;
+    }
+    // OFF does nothing for Platform API devices. We used to set brightness to
+    // zero, but some devices don't have a 0, and setting it powers up the rest
+    // of the device, so turning off a whole area would turn it back on.
+    if let Some(color) = &command.color {
+        state
+            .device_set_segment_rgb(&device, segment, color.r, color.g, color.b)
+            .await?;
+        // A solid per-segment color ends any scene the bridge had applied.
+        state
+            .device_mut(&device.sku, &device.id)
+            .await
+            .set_active_scene(None);
     }
 
     Ok(())

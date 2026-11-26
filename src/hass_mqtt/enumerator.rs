@@ -293,11 +293,11 @@ pub async fn enumerate_entities_for_device(
                 }
             }
         }
+    }
 
-        if let Some(segments) = info.supports_segmented_rgb() {
-            for n in segments {
-                entities.add(DeviceLight::for_device(d, state, Some(n)).await?);
-            }
+    if let Some(segments) = d.supports_segmented_rgb() {
+        for n in segments {
+            entities.add(DeviceLight::for_device(d, state, Some(n)).await?);
         }
     }
     Ok(())
