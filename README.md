@@ -1,8 +1,87 @@
-# Govee to MQTT bridge for Home Assistant
+# Govee to MQTT (Revived)
 
 This repo provides a `govee` executable whose primary purpose is to act
 as a bridge between [Govee](https://govee.com) devices and Home Assistant,
 via the [Home Assistant MQTT Integration](https://www.home-assistant.io/integrations/mqtt/).
+
+It is a community fork of [wez/govee2mqtt](https://github.com/wez/govee2mqtt)
+that builds on
+[florianhorner/govee2mqtt-extended](https://github.com/florianhorner/govee2mqtt-extended).
+See [Credits](#credits).
+
+> **Pre-release.** This is an early build for testers. It passes its automated
+> tests, but most changes have not been confirmed on real hardware by this
+> fork. Take a Home Assistant backup first, and please report what breaks in
+> [Issues](https://github.com/fleshinachair/govee2mqtt-revived/issues).
+> [What changed](RELEASE_NOTES.md)
+
+## Quick Install
+
+### Home Assistant add-on (HAOS and Supervised)
+
+[![Add this repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Ffleshinachair%2Fgovee2mqtt-revived)
+
+Or add it by hand:
+
+1. Go to **Settings → Apps → App store → ⋮ → Repositories**.
+2. Add `https://github.com/fleshinachair/govee2mqtt-revived`.
+3. Install **Govee to MQTT (Revived)**, configure it, and start it.
+
+Coming from `wez/govee2mqtt`? Read [the migration steps](#migrating-from-wezgovee2mqtt-zero-entity-loss)
+**before** starting it. First-time setup, including the MQTT broker, is covered
+in [Installing the add-on](docs/ADDON.md).
+
+### Docker
+
+```
+ghcr.io/fleshinachair/govee2mqtt-revived:latest
+```
+
+See [Running it in Docker](docs/DOCKER.md).
+
+## Migrating from `wez/govee2mqtt` (Zero Entity Loss)
+
+Your existing `light.*`, `switch.*`, `select.*`, `fan.*` and `sensor.*`
+entities, with their automations and history, carry over. Home Assistant
+identifies them by `unique_id`s derived from each device's hardware ID, and
+this fork keeps the same ones. It only adds entities.
+
+> **Warning: never run both at the same time.** Two bridges publishing the same
+> devices to the same MQTT broker will fight over every entity, and both want
+> port 8056.
+
+### Home Assistant add-on
+
+1. Open the old add-on's **Configuration** tab, choose **⋮ → Edit in YAML**, and
+   copy everything.
+2. **Stop** the old add-on. **Do not uninstall it** yet. Also turn off its
+   **Start on boot** and **Watchdog** switches so it cannot come back by itself.
+3. Add this repository (see [Quick Install](#quick-install)) and install
+   **Govee to MQTT (Revived)**.
+4. On its **Configuration** tab choose **⋮ → Edit in YAML**, paste, and save.
+5. **Start** it and check the log.
+
+To go back, stop this add-on and start the old one.
+
+### Docker Compose
+
+1. Stop the old container: `docker compose down` (without `-v`).
+2. In `docker-compose.yml`, change the image to
+   `ghcr.io/fleshinachair/govee2mqtt-revived:latest`. Keep your `.env` file and
+   any volumes.
+3. Start it: `docker compose up -d`
+
+### What to expect
+
+* **2FA accounts:** the new add-on starts with an empty cache, so Govee may ask
+  for a new verification code. See
+  [two-factor authentication](docs/CONFIG.md#two-factor-authentication-2fa).
+* **Sensor templates:** some sensors, such as air quality and filter life, used
+  to report `{"value": 6}` and now report `6`. Remove any template that
+  unwrapped the old form.
+* **New entities:** fans and air purifiers also get a `fan` entity, lights get
+  scene next/previous buttons and a scene info sensor, and lights with music
+  modes get a sensitivity slider.
 
 ## Features
 
@@ -42,6 +121,8 @@ via the [Home Assistant MQTT Integration](https://www.home-assistant.io/integrat
 
 * [Is my device supported?](docs/SKUS.md)
 * [Check out the FAQ](docs/FAQ.md)
+* [LAN API troubleshooting](docs/LAN.md)
+* [Music mode with custom palettes](docs/MUSIC_MODE.md)
 
 ## Credits
 
