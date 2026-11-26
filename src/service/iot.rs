@@ -239,7 +239,7 @@ impl IotClient {
 /// `errno = EPROTO`, and `mosquitto_loop_forever` treats that as fatal and
 /// returns. The loop thread exits, nothing reconnects, and the only
 /// visible trace is a single `IoT disconnected` warning.
-const IOT_RECONNECT_GRACE: Duration = Duration::from_secs(60);
+pub(crate) const IOT_RECONNECT_GRACE: Duration = Duration::from_secs(60);
 
 /// Delay before building a replacement IoT client; doubles on each
 /// consecutive failure up to `IOT_RESTART_MAX_DELAY`.
@@ -387,7 +387,7 @@ fn next_restart_delay(delay: Duration) -> Duration {
 
 /// The outcome of waiting for the next IoT event
 #[derive(Debug)]
-enum WatchedEvent {
+pub(crate) enum WatchedEvent {
     Event(Event),
     /// The client closed its event stream; it will not produce more events
     Closed,
@@ -397,20 +397,20 @@ enum WatchedEvent {
 
 /// Tracks whether the IoT connection is up, so that a disconnect that
 /// libmosquitto never recovers from is noticed instead of waited on forever.
-struct ConnectionWatch {
+pub(crate) struct ConnectionWatch {
     grace: Duration,
     disconnected_since: Option<tokio::time::Instant>,
 }
 
 impl ConnectionWatch {
-    fn new(grace: Duration) -> Self {
+    pub(crate) fn new(grace: Duration) -> Self {
         Self {
             grace,
             disconnected_since: None,
         }
     }
 
-    async fn recv(&mut self, subscriptions: &Receiver<Event>) -> WatchedEvent {
+    pub(crate) async fn recv(&mut self, subscriptions: &Receiver<Event>) -> WatchedEvent {
         let event = match self.disconnected_since {
             None => subscriptions.recv().await,
             Some(since) => {

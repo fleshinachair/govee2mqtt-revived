@@ -5,6 +5,7 @@ pub mod climate;
 pub mod command_routes;
 pub mod cover;
 pub mod enumerator;
+pub mod event;
 pub mod fan;
 pub mod humidifier;
 pub mod instance;

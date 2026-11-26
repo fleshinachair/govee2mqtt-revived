@@ -55,3 +55,4 @@ schema:
   allowed_effects: "str?"
   music_palette: "bool?"
   offline_unavailable: "bool?"
+  disable_platform_mqtt: "bool?"

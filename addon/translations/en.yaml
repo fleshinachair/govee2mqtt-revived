@@ -15,6 +15,12 @@ configuration:
     description: >-
       Set to true to show a device as unavailable when Govee reports it
       offline. Cloud-only devices can take up to 15 minutes to change.
+  disable_platform_mqtt:
+    name: Disable Device Events
+    description: >-
+      Device events (ice maker full, water empty, presence) come from Govee's
+      cloud over a separate connection, used only if you have such a device.
+      Set to true to turn it off.
   govee_email:
     name: Govee Account Email
     description: >-

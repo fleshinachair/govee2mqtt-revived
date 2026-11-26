@@ -130,6 +130,11 @@ if bashio::config.has_value offline_unavailable ; then
   export GOVEE_OFFLINE_UNAVAILABLE
 fi
 
+if bashio::config.has_value disable_platform_mqtt ; then
+  GOVEE_DISABLE_PLATFORM_MQTT="$(bashio::config disable_platform_mqtt)"
+  export GOVEE_DISABLE_PLATFORM_MQTT
+fi
+
 if bashio::config.has_value http_addr ; then
   HTTP_ADDR="$(bashio::config http_addr)"
   export HTTP_ADDR
