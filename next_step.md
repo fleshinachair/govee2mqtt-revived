@@ -17,9 +17,10 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ## Status: first pre-release prepared, not published
 
-Done on `community-revival`: Phase 0, all 32 Phase 1 picks, upstream PRs #739,
-#645 and #703, fixes for #732 and #722, the rebrand, CI, and the docs. The rest
-of Phases 2 and 3 waits until testers have this build.
+Done on `community-revival`: Phase 0, all 32 Phase 1 picks, all of Phase 2a and
+2b, fixes for #732 and #722, the rebrand, CI, and the docs. Phase 2c features
+and Phase 3 wait until testers have this build. Tester checklist:
+`TESTING.md`.
 
 ### To publish (each step needs the owner's go-ahead)
 
@@ -64,6 +65,13 @@ Until step 6 finishes, `addon/config.yaml` names a version that has no image.
   Watch tester logs, especially on 2FA accounts.
 - #722 treats only a 400 as "no scenes". Other errors still fail the whole
   list, deliberately, so that a partial list is never cached on a device.
+- #723: replacing a dead IoT client destroys the old mosquitto client. That has
+  not run on Linux or against AWS. Its TLS test asserts how libmosquitto
+  behaves and has only passed on Windows.
+- #716: only the H6022 scene prefix is reported as hardware tested.
+- #730: a broker outage over 5 minutes exits the bridge; it needs Watchdog or a
+  restart policy.
+- #697: the add-on's `webui` link is still fixed to port 8056.
 
 ---
 
@@ -294,12 +302,12 @@ All eight applied stacked on the Phase 1 result.
 - [x] **#645** Accept localized (map) enum option names. Fixes #549, #565, #578:
   startup failure with H66A1 and similar. Needs `cargo fmt`. Its fallback
   stringifies unknown shapes; add a test with a fixture.
-- [ ] **#751** H605C quirk, enabling IoT control.
-- [ ] **#595** H61A9 LAN quirk. Closes #456.
-- [ ] **#687** Timeout around the MQTT connect. Fixes #686.
-- [ ] **#676** No follow-up poll after segment commands.
-- [ ] **#720** Re-publish availability every 60 s. Targets #572, #227, #110.
-- [ ] **#716** Per-model scene prefixes (H6022 and others). Targets #324, #666;
+- [x] **#751** H605C quirk, enabling IoT control.
+- [x] **#595** H61A9 LAN quirk. Closes #456.
+- [x] **#687** Timeout around the MQTT connect. Fixes #686.
+- [x] **#676** No follow-up poll after segment commands.
+- [x] **#720** Re-publish availability every 60 s. Targets #572, #227, #110.
+- [x] **#716** Per-model scene prefixes (H6022 and others). Targets #324, #666;
   check whether it helps #518. Its table is derived from a third-party reference,
   so only some models are likely to have been tested on hardware.
 
@@ -308,18 +316,18 @@ All eight applied stacked on the Phase 1 result.
 - [x] **#703** Keep results when the cache write fails (#702: repeated logins
   led to a 24-hour account lockout). Conflicts in `cache.rs`, which `extended`
   rewrote. Port first.
-- [ ] **#730** Exit if MQTT does not reconnect within 5 minutes. `hass.rs`.
-- [ ] **#723** Recover when the IoT connection dies after a TLS EOF. `iot.rs`.
-- [ ] **#743** Prefer the Platform API color temperature range (#742, and
+- [x] **#730** Exit if MQTT does not reconnect within 5 minutes. `hass.rs`.
+- [x] **#723** Recover when the IoT connection dies after a TLS EOF. `iot.rs`.
+- [x] **#743** Prefer the Platform API color temperature range (#742, and
   possibly #731, #558, #372). `device.rs`.
-- [ ] **#711** Re-register only on HA `online`, debounced (#572). `hass.rs`.
+- [x] **#711** Re-register only on HA `online`, debounced (#572). `hass.rs`.
   Review together with #720.
-- [ ] **#718** Show Offline in the Status sensor (partial fix for #551).
+- [x] **#718** Show Offline in the Status sensor (partial fix for #551).
   `sensor.rs`.
-- [ ] **#648** Air quality monitor type, H5140 and H5106, CO2 sensor (#634,
+- [x] **#648** Air quality monitor type, H5140 and H5106, CO2 sensor (#634,
   #561). Take only the device-type, quirk, and sensor parts. The PR also changes
   branding and panic handling.
-- [ ] **#697** Configurable HTTP listen address (#424, #200). The code applies;
+- [x] **#697** Configurable HTTP listen address (#424, #200). The code applies;
   expect a docs conflict if the Phase 1 docs are in.
 
 ### 2c. Features: decide after Phases 1-3
@@ -391,7 +399,7 @@ Neither Phase 1 nor a clean Phase 2a PR resolves these. Each needs a test.
 
 - [ ] **#707** "timed out waiting for status". Gather logs; check whether the
   Phase 1 retry changes affect it.
-- [ ] **#742** H60C1 goes dark on color temperature. Covered if #743 is ported.
+- [x] **#742** H60C1 goes dark on color temperature. Covered if #743 is ported.
 - [ ] **#667** Purifier PM2.5 and AQI missing. Phase 1 adds air-quality sensor
   handling; retest, since PM2.5 may still be absent.
 - [ ] **#735**, **#729** Scenes accepted but not applied. Retest after #716.

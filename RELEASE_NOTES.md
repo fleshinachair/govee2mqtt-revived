@@ -6,11 +6,17 @@ Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb6
 not confirmed any change against a real Govee account or device. Take a Home
 Assistant backup first. Moving from wez's add-on: see
 [the migration steps](README.md#migrating-from-wezgovee2mqtt-zero-entity-loss).
+What to try, and how to report it: [TESTING.md](TESTING.md).
+
+**Turn on the add-on's Watchdog switch.** The bridge now exits on purpose when it
+cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
 
-## Fixed on top of govee2mqtt-extended
+## Fixes
+
+### Startup, login and scenes
 
 | Problem | Upstream |
 |---|---|
@@ -19,6 +25,33 @@ References such as `wez#739` are issues and pull requests in
 | Startup failure on `pactType: -1` | wez#732 |
 | All effects lost when a model has no scene list | wez#722 |
 | Repeated logins, and possible 24-hour lockout, when the cache cannot be written | PR wez#703 by Nick Greenway (wez#702) |
+| Scenes accepted but not applied on some models, such as the H6022 | PR wez#716 by knows-cloud (wez#324, wez#666) |
+
+### Connections and availability
+
+| Problem | Upstream |
+|---|---|
+| Everything stays `unavailable` after Home Assistant restarts | PR wez#720 by nathang21, PR wez#711 by carloscae (wez#572, wez#227, wez#110) |
+| Bridge never reconnects after the MQTT broker goes away | PR wez#730 by PKizzle |
+| Bridge hangs forever on an unanswered MQTT connection attempt | PR wez#687 by hartmood (wez#686) |
+| Cloud (AWS IoT) control silently stops until a restart | PR wez#723 by paulsmitz1 |
+
+### Devices
+
+| Problem | Upstream |
+|---|---|
+| Light reports on but is dark at some color temperatures (H60C1) | PR wez#743 by abhishekgovande (wez#742) |
+| Segment commands followed by a misleading whole-device update | PR wez#676 by aserper |
+| Status sensor says Available for an offline device | PR wez#718 by snoack (wez#551, in part) |
+| Air quality monitors H5140 and H5106 have no sensors | PR wez#648 by jj33 (wez#634, wez#561) |
+| H605C takes 30-40 seconds to switch | PR wez#751 by TBE4034 |
+| H61A9 has no LAN control | PR wez#595 by rutalreja-deloitte (wez#456) |
+
+### New option
+
+The web page's address and port can be set: `http_addr` and `http_port` in the
+add-on, `HTTP_ADDR` and `HTTP_PORT` elsewhere (PR wez#697 by fpedrei,
+wez#424, wez#200).
 
 ## Brought in from govee2mqtt-extended
 
@@ -28,7 +61,8 @@ References such as `wez#739` are issues and pull requests in
 * **Two-factor authentication:** the bridge requests the emailed code and
   accepts it in `govee_2fa_code` (aimed at wez#647, wez#682, wez#627, wez#633)
 * **Fewer crashes:** a device missing from state no longer takes down the MQTT
-  integration, and an unexpected exit now restarts the add-on (wez#617, wez#618)
+  integration, and an unexpected exit is now reported as a failure (wez#617,
+  wez#618)
 * **Security:** login details are kept out of logs; vulnerable dependencies
   updated
 * **Fans and purifiers:** native `fan` entities
@@ -49,25 +83,39 @@ References such as `wez#739` are issues and pull requests in
 * Entity `unique_id`s are unchanged. New entities are added.
 * Sensors that reported `{"value": 6}` now report `6` (wez#369, wez#510).
 * The new add-on starts with an empty cache; 2FA accounts may need a new code.
+* Some lights offer a **narrower color temperature range**, now taken from
+  Govee's data for that device. Check automations that set a very warm or very
+  cool value.
+* The Status sensor can now read **Offline**.
+* If the MQTT broker is unreachable for **5 minutes**, the bridge exits so that
+  it can be restarted.
+* Scene data is now encoded differently for H6022, H6065, H6066, H6052, H6092,
+  H610A, H6079 and H70C4. Only the H6022 is reported as hardware tested. If
+  scenes stopped working on one of these, please report it.
 
 ## Not yet confirmed
 
 * Whether 2FA login works for the reporters of the issues above.
 * Whether wez#722's reporter (H6038) gets effects back: the remaining sources
   decide that.
-* Purifier PM2.5 and air quality readings (wez#667, wez#369).
+* Recovering a dead AWS IoT connection: only noticing that it died has been
+  tested, against a simulated server on Windows. Replacing it has not run
+  against Govee or on Linux.
+* Air quality monitor and purifier readings (wez#634, wez#667, wez#369).
 
 ## Known problems still open
 
 * The bridge exits at startup if Govee's servers cannot be reached (wez#76).
 * It crashes at startup if the cache database cannot be opened (wez#536).
+* High CPU use after an MQTT broker restart has been reported (wez#749).
+* Offline devices still appear controllable; only the Status sensor says so.
 * Most missing device models are not added yet.
 
-## Held for the next release
+## Not in this build
 
-Open upstream pull requests: wez#751, wez#595, wez#687, wez#676, wez#720,
-wez#716, wez#730, wez#723, wez#743, wez#711, wez#718, wez#648, wez#697, and the
-feature requests listed in [next_step.md](next_step.md).
+Upstream feature pull requests: wez#752, wez#736, wez#734, wez#726, wez#724,
+wez#717, wez#715, wez#698, wez#693, wez#690. Remaining issues are listed in
+[next_step.md](next_step.md).
 
 ## Not taken from govee2mqtt-extended
 

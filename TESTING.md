@@ -1,0 +1,59 @@
+# Testing the pre-release
+
+Thank you for trying it. This fork has not confirmed any change on real Govee
+hardware, so your report is the first real test. "It works" is useful too.
+
+## Before you start
+
+1. Take a Home Assistant backup.
+2. If you are moving from wez's add-on, note how many Govee entities you have,
+   then follow
+   [the migration steps](README.md#migrating-from-wezgovee2mqtt-zero-entity-loss).
+3. Turn on **Start on boot** and **Watchdog** for the new add-on. With Docker,
+   keep `restart: unless-stopped`.
+
+## Everyone
+
+- [ ] Your old entities are still there, with the same names and history, and
+      none are duplicated.
+- [ ] Power, brightness, color and effects work.
+- [ ] Restart Home Assistant. Entities become available again within a couple of
+      minutes without restarting the add-on.
+- [ ] Restart the MQTT broker. Control works again afterwards.
+- [ ] Leave it running for a day or more. Control still works.
+- [ ] The log has no `panicked`, no `FATAL`, and no repeated logins.
+
+## If this applies to you
+
+| You have | Try | Tell us |
+|---|---|---|
+| A Govee account with 2FA | [Enter the emailed code](docs/CONFIG.md#two-factor-authentication-2fa), then restart a few times | Whether it asks for a new code again |
+| Tap-to-Run shortcuts | Activate one from Home Assistant | Whether they are listed and work |
+| H6022, H6065, H6066, H6052, H6092, H610A, H6079 or H70C4 | Choose several effects | Whether the light actually changes |
+| H66A1, or a startup failure on wez's version | Start the add-on | Whether it starts |
+| A light with color temperature | Set the warmest and coolest values | Whether it stays lit, and whether the range looks right |
+| A segmented light | Change individual segments | Whether the app and Home Assistant agree |
+| A fan or air purifier | Use the new `fan` entity | Whether speed and modes match the device |
+| H5140 or H5106 | Look at the sensors | Whether the values match the Govee app |
+| H605C or H61A9 | Switch it on and off | How long it takes |
+| An effects list that was empty on wez's version | Open the list | Whether effects appear |
+| A device that is unplugged | Check its Status sensor after 20 minutes | What it says |
+| Something already using port 8056 | Set `http_port` | Whether the web page loads |
+
+## Reporting
+
+Open an [issue](https://github.com/fleshinachair/govee2mqtt-revived/issues) with:
+
+* The device model, such as `H6159`
+* The version from the add-on's **Info** tab
+* Add-on or Docker
+* What you did, what you expected, what happened
+* The log, from startup if you can
+
+**Check the log for personal details before posting it.** For more detail set
+`debug_level` to `govee=trace`, but trace logs can contain passwords and tokens.
+
+## Going back
+
+Stop the new add-on and start the old one. With Docker, restore the old image
+name and run `docker compose up -d`.

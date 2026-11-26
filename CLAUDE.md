@@ -13,7 +13,7 @@ The roadmap and current execution checklist are in `next_step.md`.
 | `extended` | `florianhorner/govee2mqtt-extended` | Sibling fork we cherry-pick from |
 
 The tree is upstream `6f5a844`, plus 32 commits picked from `extended`, plus
-fixes made here. The GitHub repository is to be renamed to
+open upstream pull requests and fixes made here. The GitHub repository is to be renamed to
 `govee2mqtt-revived`; see `next_step.md` for publishing status.
 
 ## Engineering rules
@@ -181,7 +181,10 @@ exits (upstream #76). Cloud discovery repeats every 600 s.
 - `spawn_hass_integration` connects with `mosquitto-rs`; `run_mqtt_loop`
   dispatches commands and rebuilds subscriptions after reconnect.
 - `rebuild_router` registers command topics under `gv2mqtt/`, plus the HA status
-  topic `<discovery_prefix>/status`.
+  topic `<discovery_prefix>/status`. Only `online` there re-registers entities.
+- Availability is not retained, so it is re-published every 60 s.
+- If the broker connection is not restored within 5 minutes the process exits
+  with status 1 and relies on a supervisor to restart it.
 - Entities implement `EntityInstance` (`publish_config`, `notify_state`).
   `enumerator.rs` builds them from device capabilities and quirks.
 - Discovery configs go to `<discovery_prefix>/<component>/<unique_id>/config`.
@@ -205,7 +208,9 @@ Tap-to-Run shortcuts. Govee changes it unilaterally: app version checks, 2FA,
 and token scopes have each broken it.
 
 **AWS IoT** (`service/iot.rs`). MQTT over TLS using the account certificate.
-Pushes status and accepts control. Needs the account login.
+Pushes status and accepts control. Needs the account login. libmosquitto can
+stop reconnecting, so a supervisor replaces a client that stays disconnected
+for 60 s, backing off from 5 s to 5 min.
 
 **LAN API** (`lan_api.rs`). UDP: multicast scan to `239.255.255.250:4001`,
 replies on `4002`, commands to device port `4003`. Must be enabled per device in
@@ -244,7 +249,9 @@ what Govee's metadata gets wrong.
   `with_platform_temperature_sensor_units`; see the file for the rest.
 - A device with no quirk gets **no IoT control** (`iot_api_supported()` is
   false), so commands go over LAN or the slower Platform API.
-- A quirk's color temperature range overrides what the Platform API reports.
+- A quirk's explicit color temperature range overrides the Platform API. The
+  generic `DEFAULT_COLOR_TEMP_RANGE` yields to a usable Platform API range,
+  unless the quirk avoids the Platform API.
 - Some model-specific behaviour is keyed on SKU strings elsewhere, for example
   in `hass_mqtt/work_mode.rs`.
 
@@ -261,7 +268,8 @@ If a write fails the value is kept in memory, and memory is read before disk.
 
 ### HTTP server
 
-Port 8056, **no authentication**, and it can control devices. Do not expose it
+Port 8056 on all interfaces by default (`HTTP_ADDR`, `HTTP_PORT`), **no
+authentication**, and it can control devices. Do not expose it
 beyond the local network.
 
 ## Build and release pipeline

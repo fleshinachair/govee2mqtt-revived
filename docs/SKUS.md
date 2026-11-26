@@ -41,5 +41,5 @@ Govee2MQTT works as a bridge to Govee's APIs — it doesn't contain much
 device-specific code. If your device has Wi-Fi and connects to the Govee
 Home app, there's a good chance it already works.
 
-If it doesn't, [file an issue](https://github.com/wez/govee2mqtt/issues)
+If it doesn't, [file an issue](https://github.com/fleshinachair/govee2mqtt-revived/issues)
 with your device SKU and we can investigate.

@@ -15,7 +15,9 @@ report problems in
    [API key](https://developer.govee.com/reference/apply-you-govee-api-key).
    All three are optional, but without them you only get devices with the LAN
    API enabled.
-3. Start it and check the **Log** tab.
+3. Turn on **Start on boot** and **Watchdog**. The bridge exits when it cannot
+   recover by itself, and the Watchdog restarts it.
+4. Start it and check the **Log** tab.
 
 Every setting is described in the
 [configuration reference](https://github.com/fleshinachair/govee2mqtt-revived/blob/main/docs/CONFIG.md).
@@ -37,7 +39,8 @@ port 8056.
    **Start on boot** and **Watchdog** switches.
 3. Install **Govee to MQTT (Revived)**.
 4. On its **Configuration** tab choose **⋮ → Edit in YAML**, paste, and save.
-5. **Start** it and check the log.
+5. Turn on **Start on boot** and **Watchdog**.
+6. **Start** it and check the log.
 
 To go back, stop this app and start the old one.
 
@@ -58,6 +61,8 @@ To go back, stop this app and start the old one.
 * **New entities:** fans and air purifiers also get a `fan` entity, lights get
   scene next/previous buttons and a scene info sensor, and lights with music
   modes get a sensitivity slider.
+* **Color temperature:** some lights now offer a narrower range, taken from
+  Govee's data for that device.
 
 ## Two-factor authentication
 
@@ -66,6 +71,9 @@ To go back, stop this app and start the old one.
 3. Restart. After login succeeds, remove the code from the configuration.
 
 ## Reporting a problem
+
+[What to test](https://github.com/fleshinachair/govee2mqtt-revived/blob/main/TESTING.md)
+lists what has not been tried on real hardware.
 
 Include your device model (such as H6159), the version shown on this app's
 **Info** tab, and the log. Check the log for personal details before posting.

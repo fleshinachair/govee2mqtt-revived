@@ -2,7 +2,12 @@
 
 ## First pre-release of Govee to MQTT (Revived)
 
+- Turn on the Watchdog switch: the bridge now exits when it cannot recover
 - Fix Tap-to-Run, two startup failures, lost effects, and repeated logins
+- Fix entities stuck unavailable, MQTT and cloud connections that never recover
+- Fix scenes on H6022, dark lights at some color temperatures, air quality monitors
+- Some lights now offer a narrower color temperature range
+- Add http_addr and http_port options
 - Add 2FA login, fan entities, scene controls and music modes from govee2mqtt-extended
 - New add-on name and slug. Stop the old add-on before starting this one
 - Some sensors now report 6 instead of {"value": 6}

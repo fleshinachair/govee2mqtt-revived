@@ -13,7 +13,7 @@ See [Credits](#credits).
 > tests, but most changes have not been confirmed on real hardware by this
 > fork. Take a Home Assistant backup first, and please report what breaks in
 > [Issues](https://github.com/fleshinachair/govee2mqtt-revived/issues).
-> [What changed](RELEASE_NOTES.md)
+> [What changed](RELEASE_NOTES.md) · [What to test](TESTING.md)
 
 ## Quick Install
 
@@ -59,7 +59,9 @@ this fork keeps the same ones. It only adds entities.
 3. Add this repository (see [Quick Install](#quick-install)) and install
    **Govee to MQTT (Revived)**.
 4. On its **Configuration** tab choose **⋮ → Edit in YAML**, paste, and save.
-5. **Start** it and check the log.
+5. Turn on **Start on boot** and **Watchdog**. The bridge exits when it cannot
+   recover by itself, and the Watchdog restarts it.
+6. **Start** it and check the log.
 
 To go back, stop this add-on and start the old one.
 
@@ -82,6 +84,8 @@ To go back, stop this add-on and start the old one.
 * **New entities:** fans and air purifiers also get a `fan` entity, lights get
   scene next/previous buttons and a scene info sensor, and lights with music
   modes get a sensitivity slider.
+* **Color temperature:** some lights now offer a narrower range, taken from
+  Govee's data for that device.
 
 ## Features
 
@@ -145,6 +149,33 @@ Authors of open upstream pull requests applied here:
   ([wez/govee2mqtt#645](https://github.com/wez/govee2mqtt/pull/645))
 * [Nick Greenway](https://github.com/nickgreenway): surviving cache write
   failures ([wez/govee2mqtt#703](https://github.com/wez/govee2mqtt/pull/703))
+
+* [TBE4034](https://github.com/TBE4034): H605C
+  ([#751](https://github.com/wez/govee2mqtt/pull/751))
+* [rutalreja-deloitte](https://github.com/rutalreja-deloitte): H61A9
+  ([#595](https://github.com/wez/govee2mqtt/pull/595))
+* [hartmood](https://github.com/hartmood): MQTT connect timeout
+  ([#687](https://github.com/wez/govee2mqtt/pull/687))
+* [aserper](https://github.com/aserper): segment commands
+  ([#676](https://github.com/wez/govee2mqtt/pull/676))
+* [nathang21](https://github.com/nathang21): availability after Home Assistant
+  restarts ([#720](https://github.com/wez/govee2mqtt/pull/720))
+* [knows-cloud](https://github.com/knows-cloud): per-model scene encoding
+  ([#716](https://github.com/wez/govee2mqtt/pull/716))
+* [PKizzle](https://github.com/PKizzle): MQTT reconnect
+  ([#730](https://github.com/wez/govee2mqtt/pull/730))
+* [paulsmitz1](https://github.com/paulsmitz1): AWS IoT recovery
+  ([#723](https://github.com/wez/govee2mqtt/pull/723))
+* [abhishekgovande](https://github.com/abhishekgovande): color temperature
+  ranges ([#743](https://github.com/wez/govee2mqtt/pull/743))
+* [carloscae](https://github.com/carloscae): re-registration handling
+  ([#711](https://github.com/wez/govee2mqtt/pull/711))
+* [snoack](https://github.com/snoack): Offline status
+  ([#718](https://github.com/wez/govee2mqtt/pull/718))
+* [jj33](https://github.com/jj33): air quality monitors
+  ([#648](https://github.com/wez/govee2mqtt/pull/648))
+* [fpedrei](https://github.com/fpedrei): web listen address
+  ([#697](https://github.com/wez/govee2mqtt/pull/697))
 
 Others whose work arrived through `govee2mqtt-extended`:
 

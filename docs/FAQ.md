@@ -60,7 +60,7 @@ via MQTT. To troubleshoot:
 2. Try deleting the affected device(s) from the MQTT integration, then
    clicking **"Purge Caches"** on the "Govee to MQTT" device.
 
-If the issue persists, please [file an issue](https://github.com/wez/govee2mqtt/issues)
+If the issue persists, please [file an issue](https://github.com/fleshinachair/govee2mqtt-revived/issues)
 with the relevant log entries.
 
 <img src="https://github.com/wez/govee2mqtt/assets/117777/565d8580-f068-4ec3-8c16-11d2808688bf" width="50%">
@@ -75,7 +75,7 @@ Govee2MQTT supports any device that Govee exposes through its APIs — there
 is very little device-specific code in the bridge itself. If your device has
 Wi-Fi and a Govee API, it should work automatically.
 
-If it doesn't, [file an issue](https://github.com/wez/govee2mqtt/issues) with
+If it doesn't, [file an issue](https://github.com/fleshinachair/govee2mqtt-revived/issues) with
 your device SKU and we can investigate whether a quirks entry is needed.
 See [Supported Devices](SKUS.md) for more details.
 
@@ -113,5 +113,5 @@ See [LAN API Troubleshooting](LAN.md) for common causes and solutions.
 ## "devices not belong you" error in logs
 
 This error comes from Govee's Platform API when it encounters BLE-only
-devices with no Wi-Fi support. Please [file an issue](https://github.com/wez/govee2mqtt/issues)
+devices with no Wi-Fi support. Please [file an issue](https://github.com/fleshinachair/govee2mqtt-revived/issues)
 with your device SKU so we can add it to the quirks database.
