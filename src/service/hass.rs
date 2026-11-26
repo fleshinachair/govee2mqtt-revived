@@ -1,11 +1,11 @@
 use crate::hass_mqtt::climate::mqtt_set_temperature;
 use crate::hass_mqtt::command_routes::{
-    device_id_segment, CommandTopic, FAN_COMMAND_ROUTE, FAN_SET_PERCENTAGE_ROUTE,
-    HUMIDIFIER_SET_MODE_ROUTE, HUMIDIFIER_SET_TARGET_ROUTE, LIGHT_COMMAND_ROUTE,
-    LIGHT_SEGMENT_COMMAND_ROUTE, MUSIC_SENSITIVITY_CLEAR_ROUTE, MUSIC_SENSITIVITY_COMMAND_ROUTE,
-    NUMBER_COMMAND_ROUTE, ONECLICK_ROUTE, PURGE_CACHES_ROUTE, REQUEST_PLATFORM_DATA_ROUTE,
-    SCENE_NEXT_ROUTE, SCENE_PREV_ROUTE, SET_MODE_SCENE_ROUTE, SET_MUSIC_PALETTE_ROUTE,
-    SET_TEMPERATURE_ROUTE, SET_WORK_MODE_ROUTE, SWITCH_COMMAND_ROUTE,
+    device_id_segment, CommandTopic, ENERGY_COUNTER_ROUTE, FAN_COMMAND_ROUTE,
+    FAN_SET_PERCENTAGE_ROUTE, HUMIDIFIER_SET_MODE_ROUTE, HUMIDIFIER_SET_TARGET_ROUTE,
+    LIGHT_COMMAND_ROUTE, LIGHT_SEGMENT_COMMAND_ROUTE, MUSIC_SENSITIVITY_CLEAR_ROUTE,
+    MUSIC_SENSITIVITY_COMMAND_ROUTE, NUMBER_COMMAND_ROUTE, ONECLICK_ROUTE, PURGE_CACHES_ROUTE,
+    REQUEST_PLATFORM_DATA_ROUTE, SCENE_NEXT_ROUTE, SCENE_PREV_ROUTE, SET_MODE_SCENE_ROUTE,
+    SET_MUSIC_PALETTE_ROUTE, SET_TEMPERATURE_ROUTE, SET_WORK_MODE_ROUTE, SWITCH_COMMAND_ROUTE,
 };
 use crate::hass_mqtt::enumerator::{enumerate_all_entites, enumerate_entities_for_device};
 use crate::hass_mqtt::humidifier::{mqtt_device_set_work_mode, mqtt_humidifier_set_target};
@@ -15,7 +15,7 @@ use crate::hass_mqtt::select::mqtt_set_mode_scene;
 use crate::lan_api::DeviceColor;
 use crate::opt_env_var;
 use crate::platform_api::{from_json, DeviceType};
-use crate::service::device::Device as ServiceDevice;
+use crate::service::device::{Device as ServiceDevice, EnergyCounterState};
 use crate::service::state::StateHandle;
 use crate::temperature::TemperatureScale;
 use anyhow::Context;
@@ -76,6 +76,7 @@ macro_rules! mqtt_routes {
             SET_MUSIC_PALETTE_ROUTE => mqtt_set_music_palette,
             FAN_SET_PERCENTAGE_ROUTE => crate::hass_mqtt::fan::mqtt_fan_set_percentage,
             FAN_COMMAND_ROUTE => crate::hass_mqtt::fan::mqtt_fan_command,
+            ENERGY_COUNTER_ROUTE => mqtt_energy_counter,
         }
     };
 }
@@ -505,6 +506,24 @@ impl HassClient {
         Ok(())
     }
 
+    /// Publishes at QoS 1, for messages the broker must not drop. With
+    /// retain, it keeps them for when we subscribe again after a restart.
+    pub async fn publish_reliably<
+        T: AsRef<str> + std::fmt::Display,
+        P: AsRef<[u8]> + std::fmt::Display,
+    >(
+        &self,
+        topic: T,
+        payload: P,
+        retain: bool,
+    ) -> anyhow::Result<()> {
+        log::trace!("{topic} -> {payload}");
+        self.client
+            .publish(topic, payload, QoS::AtLeastOnce, retain)
+            .await?;
+        Ok(())
+    }
+
     pub async fn advise_hass_of_light_state(
         &self,
         device: &ServiceDevice,
@@ -544,6 +563,12 @@ pub fn switch_instance_state_topic(device: &ServiceDevice, instance: &str) -> St
         "gv2mqtt/switch/{id}/{instance}/state",
         id = topic_safe_id(device)
     )
+}
+
+/// Holds the retained EnergyCounterState of a plug. Home Assistant
+/// doesn't subscribe to it, see mqtt_energy_counter
+pub fn energy_counter_topic(device: &ServiceDevice) -> String {
+    format!("gv2mqtt/energy/{id}/counter", id = topic_safe_id(device))
 }
 
 pub fn light_state_topic(device: &ServiceDevice) -> String {
@@ -1236,6 +1261,28 @@ async fn mqtt_homeassitant_status(
     Ok(())
 }
 
+/// Restores the energy counter state that a previous run saved in the
+/// retained counter topic of a plug, see EnergyCounterState. Until that's
+/// complete, EnergyMonitoringSensor publishes an empty message to the
+/// topic along with its state. MQTT keeps the order of messages within a topic, so once we
+/// receive it, any retained state has arrived before it.
+async fn mqtt_energy_counter(
+    Payload(payload): Payload<String>,
+    Params(IdParameter { id }): Params<IdParameter>,
+    State(state): State<StateHandle>,
+) -> anyhow::Result<()> {
+    let Some(device) = state.resolve_device(&id).await else {
+        return Ok(());
+    };
+    let mut device = state.device_mut(&device.sku, &device.id).await;
+    if payload.is_empty() {
+        device.energy_counter_restored = true;
+    } else if let Ok(saved) = serde_json::from_str::<EnergyCounterState>(&payload) {
+        device.restore_energy_counter(saved);
+    }
+    Ok(())
+}
+
 async fn run_mqtt_loop(
     state: StateHandle,
     subscriber: Receiver<Event>,
@@ -1252,6 +1299,11 @@ async fn run_mqtt_loop(
         let disco_prefix = state.get_hass_disco_prefix().await;
         let mut router: MqttRouter<StateHandle> = MqttRouter::new(client.clone());
         bind_mqtt_command_routes(&mut MqttRouteBind::Live(&mut router), &disco_prefix).await?;
+        // The router subscribes at QoS 0, which would downgrade the delivery
+        // of the counter state, see HassClient::publish_reliably
+        client
+            .subscribe("gv2mqtt/energy/+/counter", QoS::AtLeastOnce)
+            .await?;
 
         tokio::time::sleep(HASS_REGISTER_DELAY).await;
         state
@@ -1564,6 +1616,7 @@ mod tests {
             ("gv2mqtt/:id/set-music-palette", "mqtt_set_music_palette"),
             ("gv2mqtt/fan/:id/set-percentage", "mqtt_fan_set_percentage"),
             ("gv2mqtt/fan/:id/command", "mqtt_fan_command"),
+            ("gv2mqtt/energy/:id/counter", "mqtt_energy_counter"),
         ];
 
         assert_eq!(MQTT_ROUTE_PAIRINGS.len(), EXPECTED.len());

@@ -11,8 +11,9 @@ use crate::hass_mqtt::number::{MusicSensitivityNumber, WorkModeNumber};
 use crate::hass_mqtt::scene::SceneConfig;
 use crate::hass_mqtt::select::{SceneModeSelect, WorkModeSelect};
 use crate::hass_mqtt::sensor::{
-    CapabilitySensor, DeviceStatusDiagnostic, GlobalFixedDiagnostic, KettleHeatingState,
-    KettleKeepWarmRemaining, KettlePlacedOnBase, SceneInfoSensor,
+    CapabilitySensor, DeviceStatusDiagnostic, EnergyMonitoringSensor, GlobalFixedDiagnostic,
+    KettleHeatingState, KettleKeepWarmRemaining, KettlePlacedOnBase, SceneInfoSensor,
+    ENERGY_MONITORING_READINGS,
 };
 use crate::hass_mqtt::switch::CapabilitySwitch;
 use crate::hass_mqtt::work_mode::ParsedWorkMode;
@@ -179,6 +180,17 @@ pub async fn enumerate_entities_for_device(
         entities.add(ButtonConfig::scene_next_for_device(d)?);
         entities.add(ButtonConfig::scene_prev_for_device(d)?);
         entities.add(SceneInfoSensor::new(d, state));
+    }
+
+    // The readings only arrive via IoT
+    let iot_reachable = d
+        .undoc_device_info
+        .as_ref()
+        .is_some_and(|info| info.entry.device_topic().is_ok());
+    if d.supports_energy_monitoring() && iot_reachable {
+        for reading in &ENERGY_MONITORING_READINGS {
+            entities.add(EnergyMonitoringSensor::new(d, state, reading));
+        }
     }
 
     if d.supports_rgb() || d.get_color_temperature_range().is_some() || d.supports_brightness() {

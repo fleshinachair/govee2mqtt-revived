@@ -257,6 +257,19 @@ impl PacketManager {
             SetSceneCode::encode,
             SetSceneCode::decode,
         ));
+        all_codecs.push(packet!(
+            &["H5086"],
+            NotifyEnergyMonitoring,
+            NotifyEnergyMonitoring,
+            0xaa,
+            0x19,
+            on_time_seconds,
+            energy_deciwatt_hours,
+            voltage_centivolts,
+            current_centiamps,
+            power_centiwatts,
+            power_factor_percent,
+        ));
 
         all_codecs.push(PacketCodec::new(
             &["Generic:Light"],
@@ -333,6 +346,38 @@ impl DecodePacketParam for u16 {
         let lo = (*self & 0xff) as u8;
         target.push(lo);
         target.push(hi);
+    }
+}
+
+/// A 16-bit value that is encoded big-endian, unlike u16
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub struct BigEndian16(pub u16);
+
+impl DecodePacketParam for BigEndian16 {
+    fn decode_param<'a>(&mut self, data: &'a [u8]) -> anyhow::Result<&'a [u8]> {
+        let bytes = data.get(..2).ok_or_else(|| anyhow!("EOF"))?;
+        self.0 = u16::from_be_bytes([bytes[0], bytes[1]]);
+        Ok(&data[2..])
+    }
+
+    fn encode_param(&self, target: &mut Vec<u8>) {
+        target.extend_from_slice(&self.0.to_be_bytes());
+    }
+}
+
+/// A 24-bit value that is encoded big-endian
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub struct BigEndian24(pub u32);
+
+impl DecodePacketParam for BigEndian24 {
+    fn decode_param<'a>(&mut self, data: &'a [u8]) -> anyhow::Result<&'a [u8]> {
+        let bytes = data.get(..3).ok_or_else(|| anyhow!("EOF"))?;
+        self.0 = u32::from_be_bytes([0, bytes[0], bytes[1], bytes[2]]);
+        Ok(&data[3..])
+    }
+
+    fn encode_param(&self, target: &mut Vec<u8>) {
+        target.extend_from_slice(&self.0.to_be_bytes()[1..]);
     }
 }
 
@@ -753,6 +798,56 @@ pub struct NotifyElementState {
     pub background: bool,
 }
 
+/// Electrical readings reported by smart plugs with energy monitoring,
+/// such as the H5086, as part of their IoT status.
+/// The plug doesn't always fill in the checksum, but the packet
+/// decoder doesn't verify it anyway.
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+pub struct NotifyEnergyMonitoring {
+    /// Seconds that the plug has been switched on since local midnight.
+    /// Like energy, it's reset after a reboot until the plug restores it.
+    pub on_time_seconds: BigEndian24,
+    /// Energy used since local midnight, in units of 0.1Wh
+    pub energy_deciwatt_hours: BigEndian24,
+    /// Line voltage in units of 0.01V
+    pub voltage_centivolts: BigEndian16,
+    /// Load current in units of 0.01A
+    pub current_centiamps: BigEndian16,
+    /// Active power in units of 0.01W
+    pub power_centiwatts: BigEndian24,
+    /// Power factor in percent
+    pub power_factor_percent: u8,
+}
+
+impl NotifyEnergyMonitoring {
+    /// The plug sometimes reports a current of zero alongside a power
+    /// factor of 255, presumably when it is sampled mid-measurement.
+    fn current_is_valid(&self) -> bool {
+        self.power_factor_percent <= 100
+    }
+
+    pub fn voltage(&self) -> f64 {
+        self.voltage_centivolts.0 as f64 / 100.
+    }
+
+    pub fn current(&self) -> Option<f64> {
+        self.current_is_valid()
+            .then(|| self.current_centiamps.0 as f64 / 100.)
+    }
+
+    pub fn power(&self) -> f64 {
+        self.power_centiwatts.0 as f64 / 100.
+    }
+
+    pub fn power_factor(&self) -> Option<u8> {
+        self.current_is_valid().then_some(self.power_factor_percent)
+    }
+
+    pub fn energy_kwh(&self) -> f64 {
+        self.energy_deciwatt_hours.0 as f64 / 10_000.
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GoveeBlePacket {
     Generic(HexBytes),
@@ -764,6 +859,7 @@ pub enum GoveeBlePacket {
     SetHumidifierNightlight(SetHumidifierNightlightParams),
     NotifyHumidifierMode(NotifyHumidifierMode),
     SetHumidifierMode(SetHumidifierMode),
+    NotifyEnergyMonitoring(NotifyEnergyMonitoring),
     NotifyHumidifierAutoMode(HumidifierAutoMode),
     NotifyHumidifierNightlight(NotifyHumidifierNightlightParams),
     NotifyKettleBaseStatus(NotifyKettleBaseStatus),
@@ -1175,6 +1271,69 @@ a3 ff 00 01 ff ff 00 00 00 00 00 00 00 00 00 00 00 00 00 5d
         // Not decoded for unrelated devices
         assert!(matches!(
             decode_base64("H7160", "qhcAAQAAAAAAAAAAAAAAAAAAALw="),
+            GoveeBlePacket::Generic(_)
+        ));
+    }
+
+    #[test]
+    fn energy_monitoring() {
+        // Captured from an H5086 with a laptop charger attached
+        let GoveeBlePacket::NotifyEnergyMonitoring(report) =
+            decode_base64("H5086", "qhkAE3gAACgwMAA9ABEOOgAAAAA=")
+        else {
+            panic!("expected NotifyEnergyMonitoring");
+        };
+        assert_eq!(
+            report,
+            NotifyEnergyMonitoring {
+                on_time_seconds: BigEndian24(4984),
+                energy_deciwatt_hours: BigEndian24(40),
+                voltage_centivolts: BigEndian16(12336),
+                current_centiamps: BigEndian16(61),
+                power_centiwatts: BigEndian24(4366),
+                power_factor_percent: 58,
+            }
+        );
+        assert_eq!(report.voltage(), 123.36);
+        assert_eq!(report.current(), Some(0.61));
+        assert_eq!(report.power(), 43.66);
+        assert_eq!(report.power_factor(), Some(58));
+        assert_eq!(report.energy_kwh(), 0.004);
+
+        // Captured with nothing attached; this one has a checksum
+        assert_eq!(
+            decode_base64("H5086", "qhkAD/QAAAAwxwAAAAAAAAAAAL8="),
+            GoveeBlePacket::NotifyEnergyMonitoring(NotifyEnergyMonitoring {
+                on_time_seconds: BigEndian24(4084),
+                voltage_centivolts: BigEndian16(12487),
+                ..Default::default()
+            })
+        );
+
+        // Captured mid-measurement: zero current with a power factor of 255
+        let GoveeBlePacket::NotifyEnergyMonitoring(report) =
+            decode_base64("H5086", "qhkAGkUAAKgwsgAAAAkL/wAAAAA=")
+        else {
+            panic!("expected NotifyEnergyMonitoring");
+        };
+        assert_eq!(report.power(), 23.15);
+        assert_eq!(report.current(), None);
+        assert_eq!(report.power_factor(), None);
+
+        round_trip(
+            "H5086",
+            &report,
+            GoveeBlePacket::NotifyEnergyMonitoring(report),
+        );
+
+        // Other packets from the same status message are left alone
+        assert!(matches!(
+            decode_base64("H5086", "qhcAAAAAAAAAAAAAAAAAAAAAAL0="),
+            GoveeBlePacket::Generic(_)
+        ));
+        // and other devices don't decode this packet
+        assert!(matches!(
+            decode_base64("H5080", "qhkAE3gAACgwMAA9ABEOOgAAAAA="),
             GoveeBlePacket::Generic(_)
         ));
     }

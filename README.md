@@ -106,6 +106,7 @@ To go back, stop this add-on and start the old one.
 |Tap-to-Run / One Click Scene|IoT|Find in the overall list of Scenes in Home Assistant, as well as under the `Govee to MQTT` device|
 |Live Device Status Updates|LAN and/or IoT|Devices typically report most changes within a couple of seconds.|
 |Light Transitions|LAN|Set `transition` (seconds) on `light.turn_on` together with a brightness. The fade is made of stepped brightness commands; any newer command ends it|
+|Energy Monitoring|IoT|Power, energy, voltage, current and power factor sensors for the H5086 smart plug|
 |Segment Color|API Key|Find the `Segment 00X` light entities associated with your main light device in Home Assistant|
 
 * `API Key` means that you have [applied for a key from Govee](https://developer.govee.com/reference/apply-you-govee-api-key)
