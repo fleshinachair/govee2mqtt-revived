@@ -24,6 +24,9 @@ pub struct Coordinator {
     permit: OwnedSemaphorePermit,
     #[allow(unused)]
     trigger_poll: Option<OneShotSender<()>>,
+
+    /// Which control request for this device this is.
+    generation: u64,
 }
 
 impl Coordinator {
@@ -31,20 +34,27 @@ impl Coordinator {
         device: Device,
         permit: OwnedSemaphorePermit,
         trigger_poll: OneShotSender<()>,
+        generation: u64,
     ) -> Self {
         Self {
             device,
             permit,
             trigger_poll: Some(trigger_poll),
+            generation,
         }
     }
 
-    pub fn new_without_poll(device: Device, permit: OwnedSemaphorePermit) -> Self {
+    pub fn new_without_poll(device: Device, permit: OwnedSemaphorePermit, generation: u64) -> Self {
         Self {
             device,
             permit,
             trigger_poll: None,
+            generation,
         }
+    }
+
+    pub fn generation(&self) -> u64 {
+        self.generation
     }
 }
 

@@ -48,6 +48,7 @@ pub struct SceneCatalogEntry {
 pub struct State {
     devices_by_id: Mutex<HashMap<String, Device>>,
     semaphore_by_id: Mutex<HashMap<String, Arc<Semaphore>>>,
+    control_generation_by_id: Mutex<HashMap<String, u64>>,
     music_sensitivity_publish_by_id: Mutex<HashMap<String, Arc<Mutex<()>>>>,
     lan_client: Mutex<Option<LanClient>>,
     platform_client: Mutex<Option<GoveeApiClient>>,
@@ -132,6 +133,24 @@ impl State {
             .clone()
     }
 
+    /// Count a new control request. Background work such as a brightness
+    /// transition stops once it is no longer the latest.
+    async fn next_control_generation(&self, id: &str) -> u64 {
+        let mut generations = self.control_generation_by_id.lock().await;
+        let generation = generations.entry(id.to_string()).or_default();
+        *generation += 1;
+        *generation
+    }
+
+    pub async fn control_generation(&self, id: &str) -> u64 {
+        self.control_generation_by_id
+            .lock()
+            .await
+            .get(id)
+            .copied()
+            .unwrap_or_default()
+    }
+
     /// Serialize a local preference update with device controls without
     /// scheduling the post-control device poll that [`Self::resolve_device_for_control`]
     /// intentionally creates for actual hardware commands.
@@ -184,6 +203,7 @@ impl State {
             .resolve_device(label)
             .await
             .ok_or_else(|| anyhow::anyhow!("device '{label}' not found"))?;
+        let generation = self.next_control_generation(&device.id).await;
         let semaphore = self.semaphore_for_device(&device).await;
         let permit = semaphore.acquire_owned().await?;
         let (tx, rx) = tokio::sync::oneshot::channel();
@@ -198,7 +218,7 @@ impl State {
             state.poll_after_control(device_id).await
         });
 
-        Ok(Coordinator::new(device, permit, tx))
+        Ok(Coordinator::new(device, permit, tx, generation))
     }
 
     /// Resolve a device for serialized control without scheduling a follow-up poll.
@@ -215,10 +235,11 @@ impl State {
             .resolve_device(label)
             .await
             .ok_or_else(|| anyhow::anyhow!("device '{label}' not found"))?;
+        let generation = self.next_control_generation(&device.id).await;
         let semaphore = self.semaphore_for_device(&device).await;
         let permit = semaphore.acquire_owned().await?;
 
-        Ok(Coordinator::new_without_poll(device, permit))
+        Ok(Coordinator::new_without_poll(device, permit, generation))
     }
 
     /// Resolve a device using its name, computed name, id or label,
