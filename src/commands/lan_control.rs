@@ -1,6 +1,7 @@
 use crate::ble::{Base64HexBytes, SetSceneCode};
 use crate::lan_api::{Client, DiscoOptions};
 use crate::undoc_api::GoveeUndocumentedApi;
+use anyhow::Context;
 use clap_num::maybe_hex;
 use std::collections::BTreeMap;
 use std::net::IpAddr;
@@ -96,7 +97,8 @@ impl LanControlCommand {
                         println!("{name}");
                     }
                 } else {
-                    let scene = Uncased::new(scene.clone().expect("scene if not list"));
+                    let scene =
+                        Uncased::new(scene.clone().context("specify a scene name or --list")?);
                     if let Some(code) = scene_code_by_name.get(&scene) {
                         let encoded =
                             Base64HexBytes::encode_for_sku("Generic:Light", code)?.base64();

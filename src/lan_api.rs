@@ -789,8 +789,7 @@ async fn send_scan(options: &DiscoOptions) -> anyhow::Result<()> {
         msg: Request::Scan {
             account_topic: AccountTopic::Reserve,
         },
-    })
-    .expect("to serialize scan message");
+    })?;
     for b in broadcasters {
         log::trace!("Send disco packet to {:?}", b.addr);
         if let Err(err) = b.broadcast(&scan).await {
@@ -936,8 +935,7 @@ impl Client {
             msg: Request::Scan {
                 account_topic: AccountTopic::Reserve,
             },
-        })
-        .expect("to serialize scan message");
+        })?;
         bcast.broadcast(scan).await?;
 
         loop {

@@ -93,8 +93,8 @@ pub fn parse_hex_color(color: &str) -> anyhow::Result<[u8; 3]> {
         hex.len() == 6 && hex.chars().all(|c| c.is_ascii_hexdigit()),
         "expected an rrggbb colour, got {color:?}"
     );
-    let channel = |i| u8::from_str_radix(&hex[i..i + 2], 16).expect("validated hex");
-    Ok([channel(0), channel(2), channel(4)])
+    let channel = |i| u8::from_str_radix(&hex[i..i + 2], 16);
+    Ok([channel(0)?, channel(2)?, channel(4)?])
 }
 
 #[cfg(test)]

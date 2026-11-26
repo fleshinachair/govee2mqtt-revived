@@ -844,7 +844,7 @@ async fn mqtt_purge_caches(State(state): State<StateHandle>) -> anyhow::Result<(
     state
         .get_hass_client()
         .await
-        .expect("have hass client")
+        .context("mqtt client is not ready")?
         .register_with_hass(&state)
         .await
         .context("register_with_hass")
@@ -987,7 +987,7 @@ async fn run_mqtt_loop(
         state
             .get_hass_client()
             .await
-            .expect("have hass client")
+            .context("mqtt client is not ready")?
             .register_with_hass(state)
             .await
             .context("register_with_hass")?;
@@ -1121,7 +1121,9 @@ pub async fn spawn_hass_integration(
         "Failed to connect to mqtt broker after several attempts"
     );
 
-    let subscriber = client.subscriber().expect("to own the subscriber");
+    let subscriber = client
+        .subscriber()
+        .context("the mqtt subscriber was already taken")?;
 
     state
         .set_hass_client(HassClient {

@@ -1,4 +1,5 @@
 use crate::service::iot::start_iot_client;
+use anyhow::Context;
 use std::sync::Arc;
 
 #[derive(clap::Parser, Debug)]
@@ -51,7 +52,10 @@ impl UndocCommand {
 
                 let state = Arc::new(crate::service::state::State::new());
                 start_iot_client(&args.undoc_args, state.clone(), None).await?;
-                let iot = state.get_iot_client().await.expect("just started iot");
+                let iot = state
+                    .get_iot_client()
+                    .await
+                    .context("the IoT client did not start")?;
 
                 iot.activate_one_click(item).await?;
             }

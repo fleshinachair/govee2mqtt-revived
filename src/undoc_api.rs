@@ -398,10 +398,20 @@ fn user_agent() -> String {
     )
 }
 
+/// How long to cache a token that expires at `expired_at_ms`. An expiry in the
+/// past, or one in unexpected units, must neither panic nor force a new login on
+/// every request, so it gets the one day cap.
+fn token_ttl(expired_at_ms: u64, now_ms: u64) -> Duration {
+    expired_at_ms
+        .checked_sub(now_ms)
+        .map_or(ONE_DAY, |ms| Duration::from_millis(ms).min(ONE_DAY))
+}
+
 pub fn ms_timestamp() -> String {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .expect("unix epoch in the past")
+        // A clock set before 1970 is not worth crashing over
+        .unwrap_or_default()
         .as_millis()
         .to_string()
 }
@@ -992,13 +1002,7 @@ impl GoveeUndocumentedApi {
 
                 let resp: Response = http_response_body(response).await?;
 
-                let ts_ms = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .expect("unix epoch in the past")
-                    .as_millis();
-
-                let ttl_ms = resp.data.expiredAt as u128 - ts_ms;
-                let ttl = Duration::from_millis(ttl_ms as u64).min(ONE_DAY);
+                let ttl = token_ttl(resp.data.expiredAt, ms_timestamp().parse()?);
 
                 Ok(CacheComputeResult::WithTtl(resp.data.token, ttl))
             },
@@ -2819,5 +2823,20 @@ mod test {
             body["code"], "111222",
             "whitespace from email paste must be normalized end-to-end"
         );
+    }
+}
+
+#[cfg(test)]
+mod token_ttl_test {
+    use super::*;
+
+    #[test]
+    fn past_or_odd_expiry_is_capped_rather_than_underflowing() {
+        let now = 1_700_000_000_000;
+        assert_eq!(token_ttl(now + 5_000, now), Duration::from_secs(5));
+        assert_eq!(token_ttl(now + 10 * 86_400_000, now), ONE_DAY);
+        assert_eq!(token_ttl(now - 1, now), ONE_DAY);
+        // seconds instead of milliseconds
+        assert_eq!(token_ttl(1_700_000_000, now), ONE_DAY);
     }
 }
