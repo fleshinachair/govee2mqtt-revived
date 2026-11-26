@@ -2,7 +2,7 @@ import { LitElement, html} from "lit";
 import { Task } from '@lit/task';
 import { timeAgo } from './timeago.js';
 
-const LAN_HELP_URL = 'https://github.com/florianhorner/govee2mqtt-extended/blob/main/docs/LAN.md';
+const LAN_HELP_URL = 'https://github.com/fleshinachair/govee2mqtt-revived/blob/main/docs/LAN.md';
 
 export class DeviceList extends LitElement {
   timer;
