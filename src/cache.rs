@@ -5,15 +5,89 @@ use chrono::{DateTime, Utc};
 use once_cell::sync::Lazy;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use sqlite_cache::{Cache, CacheConfig};
+use sqlite_cache::{Cache, CacheConfig, KeyUpdater};
+use std::collections::HashMap;
 use std::future::Future;
 #[cfg(not(test))]
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub static CACHE: Lazy<ArcSwap<Cache>> =
     Lazy::new(|| open_cache().expect("failed to initialize cache").into());
+
+/// Fallback tier for entries the on-disk cache refused to accept.
+///
+/// If the filesystem holding the cache becomes unwritable (a failing SD card
+/// remounting read-only, or a full disk) every write fails. With SQLite as the
+/// only tier the value would be recomputed on every request. For `account-info`
+/// that means a fresh Govee login each time, which can get the account locked
+/// out for 24 hours.
+///
+/// An entry exists here only while it is newer than what is on disk: a
+/// successful write removes it.
+static MEMORY_FALLBACK: Lazy<Mutex<HashMap<(String, String), MemoryEntry>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+struct MemoryEntry {
+    data: Vec<u8>,
+    expires: DateTime<Utc>,
+}
+
+fn memory_get(topic: &str, key: &str) -> Option<Vec<u8>> {
+    let mut map = MEMORY_FALLBACK.lock().ok()?;
+    let map_key = (topic.to_string(), key.to_string());
+    match map.get(&map_key) {
+        Some(entry) if Utc::now() < entry.expires => Some(entry.data.clone()),
+        Some(_) => {
+            map.remove(&map_key);
+            None
+        }
+        None => None,
+    }
+}
+
+fn memory_put(topic: &str, key: &str, data: Vec<u8>, hard_ttl: Duration) {
+    if let Ok(mut map) = MEMORY_FALLBACK.lock() {
+        map.insert(
+            (topic.to_string(), key.to_string()),
+            MemoryEntry {
+                data,
+                expires: Utc::now() + hard_ttl,
+            },
+        );
+    }
+}
+
+fn memory_forget(topic: &str, key: &str) {
+    if let Ok(mut map) = MEMORY_FALLBACK.lock() {
+        map.remove(&(topic.to_string(), key.to_string()));
+    }
+}
+
+fn memory_clear() {
+    if let Ok(mut map) = MEMORY_FALLBACK.lock() {
+        map.clear();
+    }
+}
+
+/// Persist a cache entry. A failed write must not discard a successful result,
+/// so it is logged and the value is kept in memory instead.
+fn persist(updater: KeyUpdater, data: &[u8], options: &CacheGetOptions<'_>) {
+    match updater.write(data, options.hard_ttl) {
+        Ok(()) => memory_forget(options.topic, options.key),
+        Err(err) => {
+            log::warn!(
+                "cache write failed for {}/{}: {err:#}. Keeping the value in memory; \
+                 the on-disk cache is not persisting (read-only filesystem, or out \
+                 of space?)",
+                options.topic,
+                options.key
+            );
+            memory_put(options.topic, options.key, data.to_vec(), options.hard_ttl);
+        }
+    }
+}
 
 #[cfg(not(test))]
 fn cache_file_name() -> PathBuf {
@@ -48,6 +122,7 @@ fn open_cache() -> anyhow::Result<Arc<Cache>> {
 }
 
 pub fn purge_cache() -> anyhow::Result<()> {
+    memory_clear();
     #[cfg(not(test))]
     {
         let cache_file = cache_file_name();
@@ -110,6 +185,7 @@ impl<T> CacheComputeResult<T> {
 }
 
 pub fn invalidate_key(topic: &str, key: &str) -> anyhow::Result<()> {
+    memory_forget(topic, key);
     let topic = CACHE.load().topic(topic)?;
     Ok(topic.delete(key)?)
 }
@@ -165,8 +241,13 @@ where
 
     let mut cache_entry: Option<CacheEntry<T>> = None;
 
-    if let Some(current) = &current_value {
-        match serde_json::from_slice::<CacheEntry<T>>(&current.data) {
+    // Memory first: an entry there is newer than the row on disk, which the
+    // library keeps returning after it has expired.
+    let cached_bytes = memory_get(options.topic, options.key)
+        .or_else(|| current_value.map(|current| current.data));
+
+    if let Some(bytes) = &cached_bytes {
+        match serde_json::from_slice::<CacheEntry<T>>(bytes) {
             Ok(entry) => {
                 let is_legacy_error = matches!(
                     &entry.result,
@@ -188,7 +269,7 @@ where
             Err(err) => {
                 log::warn!(
                     "{}",
-                    cache_parse_failure_message::<T>(&options, &err, current.data.len())
+                    cache_parse_failure_message::<T>(&options, &err, bytes.len())
                 );
                 // The payload is unusable and may predate the cache-safe
                 // error format. Delete it before recomputing so a transient
@@ -208,7 +289,7 @@ where
             };
 
             let data = serde_json::to_string_pretty(&entry)?;
-            updater.write(data.as_bytes(), options.hard_ttl)?;
+            persist(updater, data.as_bytes(), &options);
             Ok(value)
         }
         Ok(CacheComputeResult::Value(value)) => {
@@ -218,7 +299,7 @@ where
             };
 
             let data = serde_json::to_string_pretty(&entry)?;
-            updater.write(data.as_bytes(), options.hard_ttl)?;
+            persist(updater, data.as_bytes(), &options);
             Ok(value)
         }
         Err(err) => {
@@ -241,7 +322,7 @@ where
                     log::warn!("{err:#}, will use prior results");
 
                     let data = serde_json::to_string_pretty(&entry)?;
-                    updater.write(data.as_bytes(), options.hard_ttl)?;
+                    persist(updater, data.as_bytes(), &options);
 
                     entry.result.into_result()
                 }
@@ -255,7 +336,7 @@ where
                     };
 
                     let data = serde_json::to_string_pretty(&entry)?;
-                    updater.write(data.as_bytes(), options.hard_ttl)?;
+                    persist(updater, data.as_bytes(), &options);
                     Err(err)
                 }
             }
@@ -740,5 +821,84 @@ mod test {
             .unwrap();
         assert_eq!(v2, "hello");
         assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn memory_fallback_honours_ttl_topic_and_key() {
+        let ttl = Duration::from_secs(60);
+        memory_put("mem-a", "shared", b"a".to_vec(), ttl);
+        memory_put("mem-b", "shared", b"b".to_vec(), ttl);
+        memory_put("mem-a", "expired", b"x".to_vec(), Duration::ZERO);
+
+        assert_eq!(memory_get("mem-a", "shared").as_deref(), Some(&b"a"[..]));
+        assert_eq!(memory_get("mem-b", "shared").as_deref(), Some(&b"b"[..]));
+        assert_eq!(memory_get("mem-a", "expired"), None);
+
+        memory_forget("mem-a", "shared");
+        assert_eq!(memory_get("mem-a", "shared"), None);
+        assert_eq!(memory_get("mem-b", "shared").as_deref(), Some(&b"b"[..]));
+        memory_forget("mem-b", "shared");
+    }
+
+    /// wez/govee2mqtt#702: when the disk cache stops accepting writes while it
+    /// still holds an expired entry, the new result must be kept and reused.
+    #[tokio::test]
+    async fn failed_write_keeps_result_despite_expired_disk_entry() {
+        let path =
+            std::env::temp_dir().join(format!("govee-cache-test-{}.sqlite", uuid::Uuid::new_v4()));
+        let open = || sqlite_cache::rusqlite::Connection::open(&path).expect("open sqlite");
+        let cache = Cache::new(
+            CacheConfig {
+                flush_gc_ratio: 1024,
+                flush_interval: Duration::from_secs(900),
+                max_ttl: None,
+            },
+            open(),
+        )
+        .expect("Cache::new");
+        let options = CacheGetOptions {
+            topic: "test-unwritable",
+            ..opts("account", Duration::from_secs(10))
+        };
+
+        // An entry that is already expired but still on disk
+        cache_get_inner(&cache, options, async {
+            Ok(CacheComputeResult::WithTtl(1_u64, Duration::ZERO))
+        })
+        .await
+        .unwrap();
+
+        // From now on every write fails
+        let other = open();
+        let table: String = other
+            .query_row(
+                "select name from sqlite_master where type = 'table' and name like 'topic_%'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        other
+            .execute_batch(&format!(
+                "create trigger fail_writes before insert on {table} \
+                 begin select raise(abort, 'simulated unwritable disk'); end;"
+            ))
+            .unwrap();
+
+        let calls = AtomicUsize::new(0);
+        for _ in 0..3 {
+            let value = cache_get_inner(&cache, options, async {
+                calls.fetch_add(1, Ordering::SeqCst);
+                Ok(CacheComputeResult::Value(2_u64))
+            })
+            .await
+            .unwrap();
+            assert_eq!(value, 2);
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), 1, "must not recompute");
+
+        memory_forget("test-unwritable", "account");
+        drop(other);
+        drop(cache);
+        let _ = std::fs::remove_file(&path);
     }
 }
