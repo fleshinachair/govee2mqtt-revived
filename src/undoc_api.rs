@@ -1360,8 +1360,8 @@ pub struct OneClickIotRuleDevice {
     pub ic_sub_2: Option<u32>,
     #[serde(deserialize_with = "boolean_int")]
     pub is_feast: bool,
-    pub pact_type: Option<u32>,
-    pub pact_code: Option<u32>,
+    pub pact_type: Option<i64>,
+    pub pact_code: Option<i64>,
 
     pub settings: Option<JsonValue>,
     pub spec: Option<String>,
@@ -1424,8 +1424,8 @@ pub struct DeviceEntry {
     pub device_name: String,
     pub goods_type: u32,
     pub group_id: u64,
-    pub pact_code: Option<u32>,
-    pub pact_type: Option<u32>,
+    pub pact_code: Option<i64>,
+    pub pact_type: Option<i64>,
     pub share: Option<u32>,
     pub sku: String,
     pub spec: String,
@@ -1474,8 +1474,8 @@ pub struct DeviceSettings {
     pub ble_name: Option<String>,
     pub topic: Option<Redacted<String>>,
     pub wifi_mac: Option<String>,
-    pub pact_type: Option<u32>,
-    pub pact_code: Option<u32>,
+    pub pact_type: Option<i64>,
+    pub pact_code: Option<i64>,
     pub dsp_version_soft: Option<JsonValue>,
     pub wifi_soft_version: Option<String>,
     pub wifi_hard_version: Option<String>,
@@ -1760,6 +1760,34 @@ mod test {
         let resp: OneClickResponse =
             from_json(include_str!("../test-data/undoc-one-click-issue36.json")).unwrap();
         k9::assert_matches_snapshot!(format!("{resp:#?}"));
+    }
+
+    /// wez/govee2mqtt#732: Govee reports -1 for some devices, and one such
+    /// value used to fail the whole device list.
+    #[test]
+    fn negative_pact_values_do_not_fail_discovery() {
+        let raw = include_str!("../test-data/undoc-device-list.json")
+            .replace(r#""pactType": 1"#, r#""pactType": -1"#)
+            .replace(r#""pactType": 2"#, r#""pactType": -1"#)
+            .replace(r#""pactCode": 1"#, r#""pactCode": -1"#)
+            .replace(r#"\"pactType\":1"#, r#"\"pactType\":-1"#)
+            .replace(r#"\"pactType\":2"#, r#"\"pactType\":-1"#)
+            .replace(r#"\"pactCode\":1"#, r#"\"pactCode\":-1"#);
+        let resp: DevicesResponse = from_json(&raw).unwrap();
+        assert!(!resp.devices.is_empty());
+        for device in &resp.devices {
+            let settings = &device.device_ext.device_settings;
+            assert_eq!((device.pact_type, device.pact_code), (Some(-1), Some(-1)));
+            assert_eq!(
+                (settings.pact_type, settings.pact_code),
+                (Some(-1), Some(-1))
+            );
+        }
+
+        let raw = include_str!("../test-data/undoc-one-click.json")
+            .replace(r#""pactType": 2"#, r#""pactType": -1"#)
+            .replace(r#""pactCode": 1"#, r#""pactCode": -1"#);
+        let _: OneClickResponse = from_json(&raw).unwrap();
     }
 
     #[test]
