@@ -214,6 +214,17 @@ fn load_quirks() -> HashMap<String, Quirk> {
         // Envisual TV Backlight T2: no LAN API. Without a quirk the IoT API is
         // never used and on/off goes via the much slower Platform API.
         Quirk::light("H605C", TV_BACK),
+        // No LAN API. Without a quirk the IoT API is never used, and commands
+        // go over the slow, rate limited Platform API.
+        // <https://github.com/wez/govee2mqtt/issues/621>
+        Quirk::light("H6006", BULB),
+        Quirk::light("H600D", BULB),
+        Quirk::light("H601B", BULB),
+        // <https://github.com/wez/govee2mqtt/issues/605>
+        Quirk::lan_api_capable_light("H6039", WALL_SCONCE).with_color_temp_range(2700, 6500),
+        // Not returned by the Platform API, so without a quirk it has no type
+        // and gets no entities. <https://github.com/wez/govee2mqtt/issues/577>
+        Quirk::lan_api_capable_light("H616D", STRIP),
         // Platform API probably shouldn't return this device (I suppose,
         // aside from letting us find out its name), and we need to know
         // that it is definitely BLE-only
@@ -388,6 +399,23 @@ mod test {
         assert_eq!(quirk.device_type, DeviceType::Light);
         assert_eq!(quirk.icon.as_ref(), FLOOR_LAMP);
         assert!(quirk.lan_api_capable);
+    }
+
+    #[test]
+    fn reported_lights_use_the_faster_apis() {
+        // wez/govee2mqtt#621, #605, #577
+        for (sku, lan) in [
+            ("H6006", false),
+            ("H600D", false),
+            ("H601B", false),
+            ("H6039", true),
+            ("H616D", true),
+        ] {
+            let quirk = resolve_quirk(sku).expect("quirk");
+            assert_eq!(quirk.device_type, DeviceType::Light, "{sku}");
+            assert!(quirk.iot_api_supported, "{sku}");
+            assert_eq!(quirk.lan_api_capable, lan, "{sku}");
+        }
     }
 
     #[test]
