@@ -137,6 +137,15 @@ This is a community fork, and most of the work in it was done by others.
   modes and much more were developed. They were brought over commit by commit,
   keeping their authors.
 
+Authors of open upstream pull requests applied here:
+
+* [UPEngineer](https://github.com/UPEngineer): Tap-to-Run shortcuts
+  ([wez/govee2mqtt#739](https://github.com/wez/govee2mqtt/pull/739))
+* [Raul-7-7](https://github.com/Raul-7-7): translated option names
+  ([wez/govee2mqtt#645](https://github.com/wez/govee2mqtt/pull/645))
+* [Nick Greenway](https://github.com/nickgreenway): surviving cache write
+  failures ([wez/govee2mqtt#703](https://github.com/wez/govee2mqtt/pull/703))
+
 Others whose work arrived through `govee2mqtt-extended`:
 
 * [Paulo Silveira](https://github.com/peas): IoT work mode and LAN music
