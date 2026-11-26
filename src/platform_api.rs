@@ -790,6 +790,7 @@ pub struct DeviceCapabilityState {
 struct GetDevicesResponse {
     pub code: u32,
     pub message: String,
+    #[serde(deserialize_with = "deserialize_devices")]
     pub data: Vec<HttpDeviceInfo>,
 }
 
@@ -802,7 +803,56 @@ pub struct HttpDeviceInfo {
     pub device_name: String,
     #[serde(default, rename = "type")]
     pub device_type: DeviceType,
+    #[serde(deserialize_with = "deserialize_capabilities")]
     pub capabilities: Vec<DeviceCapability>,
+}
+
+/// Parse each item of a list on its own, so that one malformed item from Govee
+/// cannot take down all the others. Returns the items and how many were skipped.
+fn parse_each<'de, D, T>(deserializer: D, what: &str) -> Result<(Vec<T>, usize), D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::de::DeserializeOwned,
+{
+    let items = Vec::<JsonValue>::deserialize(deserializer)?;
+    let mut parsed = vec![];
+    let mut skipped = 0;
+    for item in items {
+        let name = ["instance", "sku"]
+            .iter()
+            .find_map(|key| item.get(key)?.as_str())
+            .unwrap_or("<unnamed>")
+            .to_string();
+        match serde_json::from_value(item) {
+            Ok(value) => parsed.push(value),
+            Err(err) => {
+                log::warn!("Ignoring {what} {name} that cannot be parsed: {err}");
+                skipped += 1;
+            }
+        }
+    }
+    Ok((parsed, skipped))
+}
+
+fn deserialize_capabilities<'de, D>(deserializer: D) -> Result<Vec<DeviceCapability>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(parse_each(deserializer, "capability")?.0)
+}
+
+fn deserialize_devices<'de, D>(deserializer: D) -> Result<Vec<HttpDeviceInfo>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let (devices, skipped) = parse_each(deserializer, "device")?;
+    // An empty list would be cached as the truth. Failing keeps the prior one.
+    if devices.is_empty() && skipped > 0 {
+        return Err(serde::de::Error::custom(format!(
+            "none of the {skipped} devices could be parsed"
+        )));
+    }
+    Ok(devices)
 }
 
 impl HttpDeviceInfo {
@@ -2178,5 +2228,51 @@ pub(crate) mod test {
         let broken = device("H0000");
         assert!(client.get_device_scenes(&broken).await.is_err());
         assert!(client.get_device_diy_scenes(&broken).await.is_err());
+    }
+}
+
+#[cfg(test)]
+mod tolerant_parsing_test {
+    use super::*;
+    use serde_json::json;
+
+    fn response(data: JsonValue) -> anyhow::Result<GetDevicesResponse> {
+        let body = json!({"code": 200, "message": "success", "data": data});
+        from_json(body.to_string())
+    }
+
+    /// wez/govee2mqtt#538
+    #[test]
+    fn a_malformed_capability_or_device_is_skipped() {
+        let power = json!({
+            "type": "devices.capabilities.on_off",
+            "instance": "powerSwitch",
+            "parameters": {"dataType": "ENUM", "options": [{"name": "on", "value": 1}]}
+        });
+        let broken = json!({
+            "type": "devices.capabilities.segment_color_setting",
+            "instance": "segmentedColorRgb",
+            "parameters": {"dataType": "STRUCT", "fields": [{"fieldName": "rgb"}]}
+        });
+
+        let resp = response(json!([
+            {"sku": "H60B2", "device": "AA:BB", "capabilities": [power, broken]},
+            {"device": "no sku here", "capabilities": []},
+        ]))
+        .unwrap();
+
+        assert_eq!(resp.data.len(), 1);
+        let instances: Vec<&str> = resp.data[0]
+            .capabilities
+            .iter()
+            .map(|c| c.instance.as_str())
+            .collect();
+        assert_eq!(instances, ["powerSwitch"]);
+    }
+
+    #[test]
+    fn an_account_with_no_devices_is_fine_but_total_failure_is_not() {
+        assert!(response(json!([])).unwrap().data.is_empty());
+        assert!(response(json!([{"nonsense": true}])).is_err());
     }
 }
