@@ -15,24 +15,21 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: pre-release published; next set of changes ready locally, unpublished
+## Status: second pre-release published, waiting for its first real test
 
-Published on 2026-11-26 as `2026.11.26-dd7edbbb` (`origin/main` at `41b66d7`):
-Phase 0, all Phase 1 picks, Phase 2a and 2b, fixes for #732 and #722, rebrand,
-CI and docs. It has not yet run on real hardware.
+Published on 2026-11-26 as `2026.11.26-9d98b62e`: everything in the first
+pre-release (`2026.11.26-dd7edbbb`), the Phase 3 fixes ticked below, seven
+Phase 2c features and the outage fallback for #76. The tests and image builds
+passed on Linux. Nothing has run on real hardware.
 
-Committed on the local `community-revival` branch since then, **not pushed**:
-the Phase 3 fixes ticked below and seven Phase 2c features. The commit gate
-passes on Windows, as do the all-features test and clippy runs (433 tests).
-Linux CI has not seen any of it.
+A LAN check from the development PC found no replies. That PC's firewall has
+block rules for the program, so it says nothing about the lights.
 
 - [x] Fork renamed to `govee2mqtt-revived`, Issues enabled
-- [x] First pre-release published
-- [ ] Owner installs it on a real Home Assistant, migrating from wez's add-on,
-  and works through `TESTING.md`
+- [x] First and second pre-releases published
+- [ ] Owner installs the second one on a real Home Assistant, migrating from
+  wez's add-on, and works through `TESTING.md`
 - [ ] Invite testers
-- [ ] Owner decides whether to publish the newer changes, and when. Commit
-  `2990470` is the last one with fixes only; later commits add features.
 - [ ] Owner decides on #724 and #698 (see 2c)
 
 ### To release again (each push needs the owner's go-ahead)
