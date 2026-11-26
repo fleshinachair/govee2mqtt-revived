@@ -31,8 +31,8 @@ These are strict. A change that breaks one is not ready to commit.
   string byte-slicing on external text. Device and preset names are often
   non-ASCII; byte-slicing them has crashed this bridge before.
 - `.unwrap()` and `.expect()` are fine in `#[cfg(test)]` code.
-- About a dozen non-test `expect`/`panic!` sites remain. They are not
-  precedent. Do not add to them, and fix one when you touch its code path.
+- The only non-test `expect` left is the last-resort in-memory cache in
+  `cache.rs`. It is not precedent.
 
 ### 2. Gate every commit
 
@@ -263,8 +263,9 @@ device family.
 
 SQLite file `govee2mqtt-cache.sqlite` in `GOVEE_CACHE_DIR` or the user cache
 directory (`/data` in containers). It holds login tokens and API responses with
-soft, hard, and negative TTLs, so treat it as secret. Failure to open it panics.
-If a write fails the value is kept in memory, and memory is read before disk.
+soft, hard, and negative TTLs, so treat it as secret. If it cannot be opened
+the bridge logs an error and uses an in-memory cache. If a write fails the value
+is kept in memory, and memory is read before disk.
 
 ### HTTP server
 

@@ -1,4 +1,3 @@
-#[cfg(not(test))]
 use anyhow::Context;
 use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
@@ -8,13 +7,16 @@ use serde::{Deserialize, Serialize};
 use sqlite_cache::{Cache, CacheConfig, KeyUpdater};
 use std::collections::HashMap;
 use std::future::Future;
-#[cfg(not(test))]
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-pub static CACHE: Lazy<ArcSwap<Cache>> =
-    Lazy::new(|| open_cache().expect("failed to initialize cache").into());
+pub static CACHE: Lazy<ArcSwap<Cache>> = Lazy::new(|| {
+    open_cache()
+        // Only reachable if SQLite cannot even create an in-memory database
+        .expect("failed to create an in-memory cache")
+        .into()
+});
 
 /// Fallback tier for entries the on-disk cache refused to accept.
 ///
@@ -89,27 +91,17 @@ fn persist(updater: KeyUpdater, data: &[u8], options: &CacheGetOptions<'_>) {
     }
 }
 
-#[cfg(not(test))]
-fn cache_file_name() -> PathBuf {
+fn cache_file_name() -> anyhow::Result<PathBuf> {
     let cache_dir = std::env::var("GOVEE_CACHE_DIR")
         .ok()
         .map(PathBuf::from)
         .or_else(dirs_next::cache_dir)
-        .expect("failed to resolve cache dir");
+        .context("failed to resolve a cache directory; set GOVEE_CACHE_DIR")?;
 
-    cache_dir.join("govee2mqtt-cache.sqlite")
+    Ok(cache_dir.join("govee2mqtt-cache.sqlite"))
 }
 
-fn open_cache() -> anyhow::Result<Arc<Cache>> {
-    // Production-path tests seed synthetic scene metadata through the same
-    // global cache API. Never open or modify a developer's persistent cache.
-    #[cfg(test)]
-    let conn = sqlite_cache::rusqlite::Connection::open_in_memory()?;
-    #[cfg(not(test))]
-    let cache_file = cache_file_name();
-    #[cfg(not(test))]
-    let conn = sqlite_cache::rusqlite::Connection::open(&cache_file)
-        .unwrap_or_else(|_| panic!("failed to open {cache_file:?}"));
+fn new_cache(conn: sqlite_cache::rusqlite::Connection) -> anyhow::Result<Arc<Cache>> {
     Ok(Arc::new(Cache::new(
         // We have low cardinality and can be pretty relaxed
         CacheConfig {
@@ -121,16 +113,60 @@ fn open_cache() -> anyhow::Result<Arc<Cache>> {
     )?))
 }
 
+fn open_cache_file(cache_file: &Path) -> anyhow::Result<Arc<Cache>> {
+    if let Some(dir) = cache_file.parent() {
+        std::fs::create_dir_all(dir).with_context(|| format!("creating {dir:?}"))?;
+    }
+    let conn = sqlite_cache::rusqlite::Connection::open(cache_file)
+        .with_context(|| format!("opening {cache_file:?}"))?;
+    new_cache(conn).with_context(|| format!("initializing {cache_file:?}"))
+}
+
+/// Open the cache file, or fall back to memory if that is not possible.
+/// Running without a persistent cache costs a fresh Govee login and discovery
+/// on each restart, which is far better than not running at all.
+fn open_cache_or_memory(cache_file: anyhow::Result<PathBuf>) -> anyhow::Result<Arc<Cache>> {
+    match cache_file.and_then(|file| open_cache_file(&file)) {
+        Ok(cache) => Ok(cache),
+        Err(err) => {
+            log::error!(
+                "Cannot use the on-disk cache: {err:#}. Continuing with an in-memory \
+                 cache, which is lost on restart. Check that the directory is writable \
+                 by the user running the bridge."
+            );
+            new_cache(sqlite_cache::rusqlite::Connection::open_in_memory()?)
+        }
+    }
+}
+
+fn open_cache() -> anyhow::Result<Arc<Cache>> {
+    // Production-path tests seed synthetic scene metadata through the same
+    // global cache API. Never open or modify a developer's persistent cache.
+    if cfg!(test) {
+        new_cache(sqlite_cache::rusqlite::Connection::open_in_memory()?)
+    } else {
+        open_cache_or_memory(cache_file_name())
+    }
+}
+
+fn remove_cache_file() -> anyhow::Result<()> {
+    if cfg!(test) {
+        return Ok(());
+    }
+    let cache_file = cache_file_name()?;
+    match std::fs::remove_file(&cache_file) {
+        Err(err) if err.kind() != std::io::ErrorKind::NotFound => {
+            Err(err).with_context(|| format!("removing cache file {cache_file:?}"))
+        }
+        _ => Ok(()),
+    }
+}
+
 pub fn purge_cache() -> anyhow::Result<()> {
     memory_clear();
-    #[cfg(not(test))]
-    {
-        let cache_file = cache_file_name();
-        std::fs::remove_file(&cache_file)
-            .with_context(|| format!("removing cache file {cache_file:?}"))?;
-    }
+    let removed = remove_cache_file();
     CACHE.store(open_cache()?);
-    Ok(())
+    removed
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -900,5 +936,41 @@ mod test {
         drop(other);
         drop(cache);
         let _ = std::fs::remove_file(&path);
+    }
+
+    /// wez/govee2mqtt#536: a cache file that cannot be opened must not panic.
+    #[tokio::test]
+    async fn unusable_cache_location_falls_back_to_memory() {
+        // A regular file where the cache directory should be
+        let blocker =
+            std::env::temp_dir().join(format!("govee-cache-blocker-{}", uuid::Uuid::new_v4()));
+        std::fs::write(&blocker, b"this is not a database or a directory").unwrap();
+
+        for cache_file in [
+            Ok(blocker.join("cache.sqlite")),
+            // The path exists but is not a database
+            Ok(blocker.clone()),
+            Err(anyhow::anyhow!("no cache directory")),
+        ] {
+            let cache = open_cache_or_memory(cache_file).expect("in-memory fallback");
+            let value = cache_get_inner(&cache, opts("fallback", Duration::from_secs(10)), async {
+                Ok(CacheComputeResult::Value(3_u64))
+            })
+            .await
+            .unwrap();
+            assert_eq!(value, 3);
+        }
+
+        let _ = std::fs::remove_file(&blocker);
+    }
+
+    #[test]
+    fn cache_directory_is_created_when_missing() {
+        let dir = std::env::temp_dir().join(format!("govee-cache-dir-{}", uuid::Uuid::new_v4()));
+        let file = dir.join("nested").join("cache.sqlite");
+        let cache = open_cache_file(&file).expect("open");
+        assert!(file.is_file());
+        drop(cache);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
