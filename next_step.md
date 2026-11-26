@@ -15,20 +15,22 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: first pre-release prepared, not published
+## Status: first pre-release being published
 
 Done on `community-revival`: Phase 0, all 32 Phase 1 picks, all of Phase 2a and
 2b, fixes for #732 and #722, the rebrand, CI, and the docs. Phase 2c features
 and Phase 3 wait until testers have this build. Tester checklist:
 `TESTING.md`.
 
+The owner approved steps 4 to 7 on 2026-11-26.
+
 ### To publish (each step needs the owner's go-ahead)
 
-1. Rename the GitHub fork to `govee2mqtt-revived`, then
+1. (done) Rename the GitHub fork to `govee2mqtt-revived`, then
    `git remote set-url origin https://github.com/fleshinachair/govee2mqtt-revived.git`.
-2. Enable Issues.
-3. `git push origin community-revival`. This runs the tests on Linux and
-   publishes nothing. It is the first Linux build; fix what it finds.
+2. (done) Enable Issues.
+3. (done, tests passed on Linux) `git push origin community-revival`. This runs
+   the tests and publishes nothing.
 4. Fast-forward `main` and push it. This publishes the standalone image.
 5. Make the `govee2mqtt-revived` package public on GHCR.
 6. Tag from `main` (Git Bash):
