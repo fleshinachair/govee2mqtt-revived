@@ -264,20 +264,10 @@ impl GoveeApiClient {
                 allow_stale: true,
             },
             async {
-                let url = self.endpoint("/router/api/v1/device/diy-scenes");
-                let request = GetDeviceScenesRequest {
-                    request_id: request_id(),
-                    payload: GetDeviceScenesPayload {
-                        sku: device.sku.to_string(),
-                        device: device.device.to_string(),
-                    },
-                };
-
-                let resp: GetDeviceScenesResponse = self
-                    .request_with_json_response(Method::POST, url, &request)
+                let caps = self
+                    .request_scene_list("/router/api/v1/device/diy-scenes", device)
                     .await?;
-
-                Ok(CacheComputeResult::Value(resp.payload.capabilities))
+                Ok(CacheComputeResult::Value(caps))
             },
         )
         .await
@@ -302,23 +292,51 @@ impl GoveeApiClient {
                 allow_stale: true,
             },
             async {
-                let url = self.endpoint("/router/api/v1/device/scenes");
-                let request = GetDeviceScenesRequest {
-                    request_id: request_id(),
-                    payload: GetDeviceScenesPayload {
-                        sku: device.sku.to_string(),
-                        device: device.device.to_string(),
-                    },
-                };
-
-                let resp: GetDeviceScenesResponse = self
-                    .request_with_json_response(Method::POST, url, &request)
+                let caps = self
+                    .request_scene_list("/router/api/v1/device/scenes", device)
                     .await?;
-
-                Ok(CacheComputeResult::Value(resp.payload.capabilities))
+                Ok(CacheComputeResult::Value(caps))
             },
         )
         .await
+    }
+
+    /// Fetch one of the scene lists. Govee answers 400 ("devices not support
+    /// this instance") for models without it, which means "no scenes from this
+    /// source", not a failure: the other sources must still be listed. Other
+    /// errors are returned so that they are retried.
+    async fn request_scene_list(
+        &self,
+        path: &str,
+        device: &HttpDeviceInfo,
+    ) -> anyhow::Result<Vec<DeviceCapability>> {
+        let request = GetDeviceScenesRequest {
+            request_id: request_id(),
+            payload: GetDeviceScenesPayload {
+                sku: device.sku.to_string(),
+                device: device.device.to_string(),
+            },
+        };
+
+        let resp: anyhow::Result<GetDeviceScenesResponse> = self
+            .request_with_json_response(Method::POST, self.endpoint(path), &request)
+            .await;
+
+        match resp {
+            Ok(resp) => Ok(resp.payload.capabilities),
+            Err(err)
+                if HttpRequestFailed::from_err(&err)
+                    .is_some_and(|e| e.status == reqwest::StatusCode::BAD_REQUEST) =>
+            {
+                log::debug!(
+                    "{} {}: no scenes from {path}: {err:#}",
+                    device.sku,
+                    device.device
+                );
+                Ok(vec![])
+            }
+            Err(err) => Err(err),
+        }
     }
 
     pub async fn get_scene_caps(
@@ -2099,5 +2117,65 @@ pub(crate) mod test {
             let option: EnumOption = from_json(format!(r#"{{"name":{name},"value":1}}"#)).unwrap();
             assert_eq!(option.name, expected);
         }
+    }
+
+    /// wez/govee2mqtt#722: a model without one scene list must not lose the
+    /// others, while real failures must still be reported.
+    #[tokio::test]
+    async fn unsupported_scene_list_is_empty_not_an_error_issue_722() {
+        use axum::{routing::post, Json, Router};
+
+        async fn reply(Json(body): Json<JsonValue>) -> Json<JsonValue> {
+            let code = if body["payload"]["sku"] == "H6038" {
+                400
+            } else {
+                500
+            };
+            Json(serde_json::json!({
+                "requestId": "test",
+                "msg": "devices not support this instance",
+                "code": code,
+            }))
+        }
+
+        let app = Router::new()
+            .route("/router/api/v1/device/scenes", post(reply))
+            .route("/router/api/v1/device/diy-scenes", post(reply));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await });
+        let client = GoveeApiClient::new_for_test("test-key", base);
+
+        // A unique id keeps the on-disk cache out of the picture
+        let device = |sku: &str| -> HttpDeviceInfo {
+            serde_json::from_value(serde_json::json!({
+                "sku": sku,
+                "device": uuid::Uuid::new_v4().to_string(),
+                "deviceName": "test",
+                "type": "devices.types.light",
+                "capabilities": [{
+                    "type": "devices.capabilities.dynamic_scene",
+                    "instance": "lightScene",
+                    "parameters": {"dataType": "ENUM", "options": []},
+                }],
+            }))
+            .unwrap()
+        };
+
+        let unsupported = device("H6038");
+        assert!(client
+            .get_device_scenes(&unsupported)
+            .await
+            .unwrap()
+            .is_empty());
+        assert!(client
+            .get_device_diy_scenes(&unsupported)
+            .await
+            .unwrap()
+            .is_empty());
+
+        let broken = device("H0000");
+        assert!(client.get_device_scenes(&broken).await.is_err());
+        assert!(client.get_device_diy_scenes(&broken).await.is_err());
     }
 }
