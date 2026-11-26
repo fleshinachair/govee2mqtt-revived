@@ -98,7 +98,8 @@ clears it when the light is turned off or set to a solid color/temperature. A
 scene set from the Govee app stays unknown until the light is next changed
 through the bridge.
 
-These buttons are only available in [this fork](../README.md#what-this-fork-adds).
+These buttons are not in the original `wez/govee2mqtt`; see the
+[release notes](../RELEASE_NOTES.md).
 
 ## The device MAC addresses in the logs don't match my network MACs
 

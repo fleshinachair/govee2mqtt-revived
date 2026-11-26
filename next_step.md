@@ -46,7 +46,8 @@ and Phase 3 wait until testers have this build. Tester checklist:
    `addon/CHANGELOG.md`, replacing the hand-written entry.
 7. Create a GitHub release for the tag, marked **Pre-release**, using
    `RELEASE_NOTES.md`.
-8. Install it on a real Home Assistant, migrating from wez's add-on, before
+8. Install it on a real Home Assistant, migrating from wez's add-on, and work
+   through `TESTING.md` before
    inviting testers.
 
 Until step 6 finishes, `addon/config.yaml` names a version that has no image.
