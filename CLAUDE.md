@@ -174,6 +174,7 @@ exits (upstream #76). Cloud discovery repeats every 600 s.
 | `src/music.rs` | Per-SKU music palette profiles for LAN |
 | `src/sensitive.rs` | Redaction of secrets in logs and errors |
 | `src/hass_mqtt/command_routes.rs` | The single list of command topics and routes |
+| `src/service/platform_mqtt.rs` | Govee's cloud MQTT broker, for device events |
 | `src/temperature.rs` | Temperature units and conversion |
 
 ### MQTT bridge
@@ -183,6 +184,10 @@ exits (upstream #76). Cloud discovery repeats every 600 s.
 - `rebuild_router` registers command topics under `gv2mqtt/`, plus the HA status
   topic `<discovery_prefix>/status`. Only `online` there re-registers entities.
 - Availability is not retained, so it is re-published every 60 s.
+- With `GOVEE_OFFLINE_UNAVAILABLE=true`, device entities also depend on a
+  retained `gv2mqtt/<id>/availability`.
+- The energy counter of a monitoring plug is saved in a retained
+  `gv2mqtt/energy/<id>/counter`, which the bridge subscribes to itself.
 - If the broker connection is not restored within 5 minutes the process exits
   with status 1 and relies on a supervisor to restart it.
 - Entities implement `EntityInstance` (`publish_config`, `notify_state`).
@@ -199,7 +204,9 @@ exits (upstream #76). Cloud discovery repeats every 600 s.
 ### Govee clients
 
 **Platform API** (`platform_api.rs`). Official, rate limited, authenticated by
-API key. Source of capability metadata, scenes, segments, and music modes.
+API key. Source of capability metadata, scenes, segments, music modes, and,
+over its own MQTT broker, device events. The API key is that broker's topic
+name, so never log topics there.
 Responses vary by SKU and change without notice, so parse leniently.
 
 **Account API** (`undoc_api.rs`). Reverse engineered, authenticated by email and
@@ -236,6 +243,10 @@ as `ptReal` commands (scenes, humidifier settings).
 - The poll loop ticks every 30 s. It queries LAN status each tick, and IoT or
   Platform only when state is older than the poll interval (900 s; 60 s for a
   kettle that is on).
+
+- A light `transition` runs as a background task. Each control request bumps a
+  per-device generation, which ends the ramp. Never hold the device permit
+  across a long wait: it blocks that device's command queue.
 
 ### SKU and quirks system
 

@@ -40,6 +40,23 @@ hardware, so your report is the first real test. "It works" is useful too.
 | A device that is unplugged | Check its Status sensor after 20 minutes | What it says |
 | Something already using port 8056 | Set `http_port` | Whether the web page loads |
 
+## Newer changes
+
+These are not in `2026.11.26-dd7edbbb`. Check them once a later version that
+lists them in the add-on changelog is published.
+
+| You have | Try | Tell us |
+|---|---|---|
+| Any light on the LAN | `light.turn_on` with `brightness` and a 30 s `transition`, then turn it off halfway | Whether it fades, and stops at once |
+| H6061 or H6066 | Change and switch off single panels; switch off the whole room | Whether the right panel changes, and nothing wakes up |
+| H1270 | Switch main and halo separately | Whether each works |
+| H6006, H600D, H601B, H6039 or H616D | Control it | Whether it responds quickly |
+| H5086 plug | Watch the energy sensors over midnight and a replug | Whether totals look right |
+| H7170, H7171 or H7173 | Boil, lift off the base, keep warm | Whether the new sensors follow |
+| H6098 | Video Mode on and off | What the light does |
+| Ice maker or presence sensor | Trigger an event | Whether Home Assistant sees it |
+| A switch that showed unknown | Switch it | Whether its state is now right |
+
 ## Reporting
 
 Open an [issue](https://github.com/fleshinachair/govee2mqtt-revived/issues) with:

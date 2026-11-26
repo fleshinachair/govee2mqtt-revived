@@ -15,18 +15,25 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: first pre-release published, waiting for its first real test
+## Status: pre-release published; next set of changes ready locally, unpublished
 
-Published on 2026-11-26 as `2026.11.26-dd7edbbb`: Phase 0, all 32 Phase 1
-picks, all of Phase 2a and 2b, fixes for #732 and #722, the rebrand, CI, and the
-docs. The images build for amd64 and arm64 and can be pulled anonymously. Phase
-2c features and Phase 3 wait until testers have this build.
+Published on 2026-11-26 as `2026.11.26-dd7edbbb` (`origin/main` at `41b66d7`):
+Phase 0, all Phase 1 picks, Phase 2a and 2b, fixes for #732 and #722, rebrand,
+CI and docs. It has not yet run on real hardware.
+
+Committed on the local `community-revival` branch since then, **not pushed**:
+the Phase 3 fixes ticked below and seven Phase 2c features. The commit gate
+passes on Windows, as do the all-features test and clippy runs (433 tests).
+Linux CI has not seen any of it.
 
 - [x] Fork renamed to `govee2mqtt-revived`, Issues enabled
-- [x] `main` pushed, add-on image published, GitHub pre-release created
+- [x] First pre-release published
 - [ ] Owner installs it on a real Home Assistant, migrating from wez's add-on,
   and works through `TESTING.md`
 - [ ] Invite testers
+- [ ] Owner decides whether to publish the newer changes, and when. Commit
+  `2990470` is the last one with fixes only; later commits add features.
+- [ ] Owner decides on #736, #724 and #698 (see 2c)
 
 ### To release again (each push needs the owner's go-ahead)
 
@@ -71,6 +78,15 @@ docs. The images build for amd64 and arm64 and can be pulled anonymously. Phase
 - #730: a broker outage over 5 minutes exits the bridge; it needs Watchdog or a
   restart policy.
 - #697: the add-on's `webui` link is still fixed to port 8056.
+- Nothing added after the first pre-release has been tried on hardware,
+  against Govee's cloud, or on Linux. The riskiest: #693 (new cloud MQTT
+  connection), #717 (energy counter bookkeeping), #752 (raw frames to H6061 and
+  H6066, the latter untested even by the author), #690 (no captured "video off"
+  frame).
+- #693, #717, #726 and #752 were changed while porting; see their commit
+  messages.
+- The #712 fix assumes a toggle command worked. Changes made in the Govee app
+  are not seen.
 
 ---
 
@@ -329,22 +345,29 @@ All eight applied stacked on the Phase 1 result.
 - [x] **#697** Configurable HTTP listen address (#424, #200). The code applies;
   expect a docs conflict if the Phase 1 docs are in.
 
-### 2c. Features: decide after Phases 1-3
+### 2c. Features
 
-None of these was reviewed line by line. All conflict with the Phase 1 result.
+- [x] **#726** Light `transition` support (#684). The ramp was rewritten to be
+  cancellable.
+- [x] **#715** H1270 control over IoT.
+- [x] **#734** Kettle sensors.
+- [x] **#690** H6098 video mode (that commit only; its login change is
+  superseded).
+- [x] **#752** Local segment control, H6061 and H6066.
+- [x] **#693** Cloud device events (#343).
+- [x] **#717** H5086 energy monitoring (#416, #186).
 
-| PR | Feature | Note |
-|---|---|---|
-| #736 | Persist device identity across outages (#76) | Large; best answer to offline startup |
-| #752 | Local segment control, H6061 Hexa | Relates to #706 |
-| #717 | H5086 energy monitoring | #416, #186 |
-| #715 | H1270 control over IoT | |
-| #734 | Kettle sensors | |
-| #698 | H1310 fan speed and toggles | #713; overlaps the new fan platform |
-| #693 | Cloud device events | #343, maybe #708 |
-| #726 | Light `transition` support | #684 |
-| #724 | Scene effect speed | Author says it is AI generated |
-| #690 | H6098 video mode | Stacked on #689; rebase onto Phase 1 auth |
+Held back for the owner to decide:
+
+- [ ] **#736** Persist device identity across outages (#76). After the first run
+  the saved names and rooms win, so renaming a device in the Govee app would no
+  longer reach Home Assistant. The author has not tested a real outage.
+  1388 changed lines.
+- [ ] **#724** Scene effect speed. The author says it is AI generated. It
+  rewrites undocumented scene data before sending it to the device, indexes into
+  that data without bounds checks, and predates the per-model prefixes of #716.
+- [ ] **#698** H1310 fan speed and toggles (#713). The author's Home Assistant
+  checks are unticked, and it overlaps the fan platform and light handling here.
 
 ### Do not merge: superseded
 
@@ -374,15 +397,13 @@ Neither Phase 1 nor a clean Phase 2a PR resolves these. Each needs a test.
 - [x] **#722** A 400 from the scene API removes all effects and snapshots.
   `get_scene_caps` uses `?` on both scene calls; degrade per source, as it
   already does for the undocumented source.
-- [ ] **#538** Malformed `segmentedColorRgb` schema breaks discovery. First
-  check it still reproduces. Make one bad capability skip, not fail the list.
-- [ ] **#76** A cloud outage at startup exits the process. Evaluate #736.
-- [ ] **#536** Reports a panic; commenters show the cache failing to open.
-  `cache.rs` still uses `expect` and `panic!` there. Return an error or fall back
-  to an in-memory cache.
-- [ ] Audit the 15 remaining non-test `expect` sites after Phase 1: `cache.rs`
-  (3), `hass.rs` (4), `lan_api.rs` (2), `undoc_api.rs` (2), `iot.rs`,
-  `music.rs`, `commands/lan_control.rs`, `commands/undoc.rs`.
+- [x] **#538** Malformed schema breaks discovery. A bad capability or device is
+  now skipped. (The reported error matches the names bug fixed by #645.)
+- [ ] **#76** A cloud outage at startup exits the process. The Platform list is
+  cached for a week, but the account device list is not cached at all, so with
+  a Govee login configured this remains. #736 evaluated; see 2c.
+- [x] **#536** An unopenable cache now falls back to memory instead of panicking.
+- [x] Non-test `expect` audit. Only the in-memory cache fallback remains.
 
 ### 3b. 2FA and auth
 
@@ -390,7 +411,8 @@ Neither Phase 1 nor a clean Phase 2a PR resolves these. Each needs a test.
 - [ ] Find out what happens when the account token expires on a 2FA account.
   `refresh_token` is parsed but never used. **Unverified risk:** a later
   re-login could demand a new emailed code.
-- [ ] Finish #702 (account lockout) if the #703 port does not cover it.
+- [x] #702 (account lockout): covered by the #703 port and the #536 fallback.
+  Not reproduced.
 - [ ] The add-on 2FA flow needs a restart within about 15 minutes. Consider a
   better one.
 
@@ -409,28 +431,26 @@ Neither Phase 1 nor a clean Phase 2a PR resolves these. Each needs a test.
 
 - [ ] **#749** 100% CPU spin in the libmosquitto thread after a broker restart.
   No PR. Likely in `mosquitto-rs`; reproduce first. #730 does not cover it.
-- [ ] IoT subscriber failure only logs `IoT loop failed` and the process carries
-  on without IoT (`iot.rs`). Restart it with backoff, or exit. Check #723 and
-  **#696** against this.
+- [x] IoT subscriber failure: the #723 port restarts it with backoff. Whether
+  that helps **#696** is unknown.
 - [ ] **#631**, **#486**, **#408**, **#142**, **#402** "Please specify the mqtt
   broker" or broker unavailable at boot. `run.sh` now waits for the broker;
   check whether blank-config startup still fails.
 - [ ] **#508** State does not update after a command.
-- [ ] **#551**, **#509**, **#563**, **#465** Offline devices still look on.
-  Needs per-device availability; #718 only changes the Status sensor.
-- [ ] **#719**, **#712** Zone and DreamView toggles have no state.
-- [ ] Optional hardening: the client ID `govee2mqtt/<uuid>` contains `/`. The
-  Mosquitto add-on fixed its rejection in 7.0.1 (#659, #661), but other brokers
-  may be strict.
+- [x] **#551**, **#509**, **#563**, **#465** Offline devices still look on.
+  Opt-in `offline_unavailable` setting.
+- [x] **#719**, **#712** Toggles now show the state last commanded.
+- [x] The MQTT client ID no longer contains `/` (#659, #661).
 
 ### 3e. Small quirk and option wins
 
-- [ ] **#621** IoT quirks for H6006, H600D, H601B
-- [ ] **#605** H6039 LAN quirk (confirm LAN support; reporters have different hardware)
-- [ ] **#577** H616D is "Unknown device type" (needs device metadata)
+- [x] **#621** IoT quirks for H6006, H600D, H601B
+- [x] **#605** H6039 LAN quirk (LAN support rests on one reporter)
+- [x] **#577** H616D quirk (from the report; no device metadata)
 - [ ] **#731**, **#558**, **#591**, **#567** Wrong color temperature ranges.
-  9009 K is integer mired rounding (`1000000/9000 = 111`, `1000000/111 = 9009`).
-- [ ] **#116** Expose the discovery prefix as an add-on option
+  #743 covers devices whose Platform API reports a range. LAN-only lights can
+  still show 9009 K, from integer mired rounding.
+- [x] **#116** Discovery prefix add-on option
 
 ---
 

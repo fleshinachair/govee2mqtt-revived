@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Fix crashes when the cache cannot be opened or Govee sends a malformed device
+- Toggle switches show the state you last set instead of unknown
+- Add H6006, H600D, H601B, H6039 and H616D
+- New settings: hass_discovery_prefix, offline_unavailable, disable_platform_mqtt
+- Light transitions (LAN), device events, H6061 and H6066 local segments
+- H5086 energy monitoring, H717x kettle sensors, H1270 main and halo lights,
+  H6098 video mode
+- None of this has been tested on real hardware
+
 ## First pre-release of Govee to MQTT (Revived)
 
 - Turn on the Watchdog switch: the bridge now exits when it cannot recover
