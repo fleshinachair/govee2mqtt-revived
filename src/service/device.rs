@@ -624,6 +624,8 @@ impl Device {
             self.http_device_info
                 .as_ref()
                 .and_then(|info| info.get_color_temperature_range())
+                // An empty or inverted range is not usable
+                .filter(|(min, max)| *min > 0 && min < max)
         };
 
         if let Some(quirk) = quirk {
@@ -997,6 +999,20 @@ mod test {
         let mut device = Device::new("H6022", "AA:BB:CC:DD:EE:FF:42:2A");
         device.http_device_info = Some(http_info_with_color_temp("H6022", 2000, 9000));
         assert_eq!(device.get_color_temperature_range(), Some((2700, 6500)));
+    }
+
+    #[test]
+    fn color_temp_unusable_platform_range_is_ignored() {
+        let mut device = Device::new("H60C1", "AA:BB:CC:DD:EE:FF:42:2A");
+        device.lan_device = Some(lan_device("H60C1"));
+        for (min, max) in [(0, 0), (0, 6500), (6500, 2700), (4000, 4000)] {
+            device.http_device_info = Some(http_info_with_color_temp("H60C1", min, max));
+            assert_eq!(
+                device.get_color_temperature_range(),
+                Some(DEFAULT_COLOR_TEMP_RANGE),
+                "{min}-{max}"
+            );
+        }
     }
 
     #[test]
