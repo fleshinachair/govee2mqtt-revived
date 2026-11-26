@@ -120,6 +120,16 @@ if bashio::config.has_value music_palette ; then
   export GOVEE_MUSIC_PALETTE
 fi
 
+if bashio::config.has_value http_addr ; then
+  HTTP_ADDR="$(bashio::config http_addr)"
+  export HTTP_ADDR
+fi
+
+if bashio::config.has_value http_port ; then
+  HTTP_PORT="$(bashio::config http_port)"
+  export HTTP_PORT
+fi
+
 env | grep GOVEE_ | sed -r 's/_(EMAIL|KEY|PASSWORD|2FA_CODE)=.*/_\1=REDACTED/'
 set -x
 

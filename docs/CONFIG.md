@@ -238,3 +238,13 @@ for driving the bridge directly over MQTT rather than through Home Assistant.
 
 The LAN palette frames carry their own sensitivity byte, which is a different
 setting from the Platform API one the number entity writes.
+
+## HTTP Configuration
+
+The web page and HTTP API have **no authentication** and can control devices.
+Do not expose them beyond your local network.
+
+|CLI|ENV|App Config|Default|Purpose|
+|---|---|----------|-------|-------|
+|`--http-addr`|`HTTP_ADDR`|`http_addr`|`0.0.0.0`|IP address the web page listens on. `127.0.0.1` limits it to the local machine; `::` listens on IPv6.|
+|`--http-port`|`HTTP_PORT`|`http_port`|`8056`|Port the web page listens on. The add-on's **Open web UI** button always uses 8056.|

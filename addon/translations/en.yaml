@@ -129,4 +129,13 @@ configuration:
       Off by default: the frames are reverse-engineered and only mapped for a
       few SKUs. See docs/MUSIC_MODE.md for the supported devices and the
       payload format.
-
+  http_addr:
+    name: Web Page Address
+    description: >-
+      IP address the web page and HTTP API listen on (default 0.0.0.0, all
+      interfaces). They have no password and can control your devices.
+  http_port:
+    name: Web Page Port
+    description: >-
+      Port for the web page (default 8056). Change it if something else uses
+      that port. The Open web UI button still points at 8056.
