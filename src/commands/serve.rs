@@ -6,7 +6,7 @@ use crate::service::http::run_http_server;
 use crate::service::iot::start_iot_client;
 use crate::service::platform_mqtt::{resolve_ca_location, start_platform_mqtt_client};
 use crate::service::state::StateHandle;
-use crate::undoc_api::GoveeUndocumentedApi;
+use crate::undoc_api::{AccountDevices, GoveeUndocumentedApi};
 use crate::version_info::govee_version;
 use crate::UndocApiArguments;
 use anyhow::Context;
@@ -162,8 +162,10 @@ async fn enumerate_devices_via_undo_api(
     };
 
     log::info!("Querying undocumented API for device + room list");
-    let acct = client.login_account_cached().await?;
-    let info = client.get_device_list(&acct.token).await?;
+    let AccountDevices {
+        account,
+        devices: info,
+    } = client.get_device_list_resilient().await?;
     let mut group_by_id = HashMap::new();
     for group in info.groups {
         group_by_id.insert(group.group_id, group.group_name);
@@ -174,14 +176,23 @@ async fn enumerate_devices_via_undo_api(
         device.set_undoc_device_info(entry, room_name);
     }
 
-    if needs_start {
-        start_iot_client(args, state.clone(), Some(acct)).await?;
+    match account {
+        // Not yet started, because Govee could not be reached at startup
+        Some(acct) if needs_start || state.get_iot_client().await.is_none() => {
+            start_iot_client(args, state.clone(), Some(acct)).await?;
+        }
+        Some(_) => {}
+        None => log::warn!(
+            "Govee could not be reached, so its last known device list is used. \
+             Live updates from Govee start once it can be reached again."
+        ),
     }
     Ok(())
 }
 
 const ISSUE_76_EXPLANATION: &str = "\
-    Startup paused: Govee's API did not return your device list.\n\
+    Startup paused: Govee's API did not return your device list, and there is\n\
+    no saved copy from an earlier start to fall back on.\n\
     Continuing without it would cause devices to get new, less descriptive\n\
     entity IDs in Home Assistant, which can break automations and dashboards.\n\
     \n\

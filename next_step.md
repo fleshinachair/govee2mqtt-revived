@@ -33,7 +33,7 @@ Linux CI has not seen any of it.
 - [ ] Invite testers
 - [ ] Owner decides whether to publish the newer changes, and when. Commit
   `2990470` is the last one with fixes only; later commits add features.
-- [ ] Owner decides on #736, #724 and #698 (see 2c)
+- [ ] Owner decides on #724 and #698 (see 2c)
 
 ### To release again (each push needs the owner's go-ahead)
 
@@ -359,10 +359,9 @@ All eight applied stacked on the Phase 1 result.
 
 Held back for the owner to decide:
 
-- [ ] **#736** Persist device identity across outages (#76). After the first run
-  the saved names and rooms win, so renaming a device in the Govee app would no
-  longer reach Home Assistant. The author has not tested a real outage.
-  1388 changed lines.
+- [x] **#736** Persist device identity across outages (#76). Not merged:
+  replaced by a smaller change that saves Govee's last reply, so renames in the
+  Govee app still reach Home Assistant. See #76 under 3a.
 - [ ] **#724** Scene effect speed. The author says it is AI generated. It
   rewrites undocumented scene data before sending it to the device, indexes into
   that data without bounds checks, and predates the per-model prefixes of #716.
@@ -399,9 +398,10 @@ Neither Phase 1 nor a clean Phase 2a PR resolves these. Each needs a test.
   already does for the undocumented source.
 - [x] **#538** Malformed schema breaks discovery. A bad capability or device is
   now skipped. (The reported error matches the names bug fixed by #645.)
-- [ ] **#76** A cloud outage at startup exits the process. The Platform list is
-  cached for a week, but the account device list is not cached at all, so with
-  a Govee login configured this remains. #736 evaluated; see 2c.
+- [x] **#76** A cloud outage at startup exits the process. The account device
+  list is now saved too, and used only when Govee cannot be reached; AWS IoT
+  starts once a login succeeds. Untested against a real outage. The very first
+  start still needs Govee.
 - [x] **#536** An unopenable cache now falls back to memory instead of panicking.
 - [x] Non-test `expect` audit. Only the in-memory cache fallback remains.
 

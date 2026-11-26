@@ -56,6 +56,7 @@ lists them in the add-on changelog is published.
 | H6098 | Video Mode on and off | What the light does |
 | Ice maker or presence sensor | Trigger an event | Whether Home Assistant sees it |
 | A switch that showed unknown | Switch it | Whether its state is now right |
+| A Govee login configured | Restart the add-on with the internet unplugged, then plug it back in | Whether it starts, and whether live updates return within about 10 minutes |
 
 ## Reporting
 

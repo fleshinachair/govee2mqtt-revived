@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix crashes when the cache cannot be opened or Govee sends a malformed device
+- Start during a Govee outage using the device list from the last start
 - Toggle switches show the state you last set instead of unknown
 - Add H6006, H600D, H601B, H6039 and H616D
 - New settings: hass_discovery_prefix, offline_unavailable, disable_platform_mqtt

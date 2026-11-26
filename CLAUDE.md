@@ -148,8 +148,10 @@ LAN API (UDP)                     ───┘          └───────
 Startup order, in `src/commands/serve.rs`: Platform API discovery, then account
 ("undoc") discovery plus IoT, then LAN discovery (10 s wait), then the poll
 loop, then the Home Assistant MQTT integration, then the HTTP server. Each API
-is optional, but if one is configured and its first discovery fails, the process
-exits (upstream #76). Cloud discovery repeats every 600 s.
+is optional. If Govee cannot be reached (no connection, timeout or 5xx), the
+last device list fetched in the past week is used, and AWS IoT starts once a
+login succeeds. Otherwise, such as a wrong password or a 2FA prompt, a failed
+first discovery exits the process (upstream #76). Cloud discovery repeats every 600 s.
 
 ### Source map
 

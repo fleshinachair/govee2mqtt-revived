@@ -1322,13 +1322,19 @@ fn http_status_failure_with_policy(
     body: &[u8],
     allow_sensitive: bool,
 ) -> anyhow::Error {
-    anyhow::anyhow!(http_status_failure_message_with_policy(
-        url,
-        status,
-        body,
-        allow_sensitive
-    ))
+    let message = http_status_failure_message_with_policy(url, status, body, allow_sensitive);
+    if status.is_server_error() {
+        GoveeServerError(message).into()
+    } else {
+        anyhow::anyhow!(message)
+    }
 }
+
+/// Govee answered with a 5xx status: the service is down, not the request
+/// wrong. See [`crate::undoc_api::is_govee_unreachable`].
+#[derive(Error, Debug)]
+#[error("{0}")]
+pub struct GoveeServerError(pub String);
 
 #[derive(Error, Debug)]
 #[error("Failed with status {status} {}: {content}", .status.canonical_reason().unwrap_or(""))]

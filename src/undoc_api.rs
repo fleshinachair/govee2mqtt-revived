@@ -6,7 +6,7 @@ use crate::lan_api::{boolean_int, truthy};
 use crate::opt_env_var;
 use crate::platform_api::{
     from_json, from_json_with_policy, http_response_body, DeviceCapability, DeviceCapabilityKind,
-    DeviceParameters, EnumOption,
+    DeviceParameters, EnumOption, GoveeServerError,
 };
 use crate::sensitive::{
     describe_json_error_with_policy, describe_request_url, describe_sensitive_body_with_policy,
@@ -108,10 +108,35 @@ fn normalize_2fa_code(raw: Option<String>) -> Option<String> {
 /// they never hit this branch.
 fn classify_login_http_error(status_code: u16, message: String) -> anyhow::Error {
     if (500..600).contains(&status_code) {
-        NoCacheError(anyhow::anyhow!("{message}")).into()
+        NoCacheError(GoveeServerError(message).into()).into()
     } else {
         anyhow::anyhow!("{message}")
     }
+}
+
+/// Whether an error means Govee could not be reached at all: no connection,
+/// a timeout, or a 5xx from Govee. Anything else, such as a wrong password or
+/// a 2FA prompt, means Govee answered and the user may need to act.
+pub fn is_govee_unreachable(err: &anyhow::Error) -> bool {
+    err.chain().any(|cause| {
+        if let Some(err) = cause.downcast_ref::<reqwest::Error>() {
+            return err.is_connect() || err.is_timeout() || err.is_request();
+        }
+        if cause.is::<GoveeServerError>() {
+            return true;
+        }
+        // NoCacheError::source skips the error it wraps
+        cause
+            .downcast_ref::<NoCacheError>()
+            .is_some_and(|wrapped| is_govee_unreachable(&wrapped.0))
+    })
+}
+
+/// The account device list, as returned by [`GoveeUndocumentedApi::get_device_list_resilient`].
+pub struct AccountDevices {
+    /// None when Govee could not be reached and a saved list was used
+    pub account: Option<LoginAccountResponse>,
+    pub devices: DevicesResponse,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -925,6 +950,46 @@ impl GoveeUndocumentedApi {
     }
 
     pub async fn get_device_list(&self, token: &str) -> anyhow::Result<DevicesResponse> {
+        parse_device_list(&self.get_device_list_json(token).await?)
+    }
+
+    /// Log in and fetch the device list. If Govee cannot be reached, use the
+    /// list from the last time it could, so that a restart during an outage
+    /// still finds the devices. Kept as Govee sent it: re-serializing the
+    /// parsed list would lose redacted fields such as the IoT topic.
+    pub async fn get_device_list_resilient(&self) -> anyhow::Result<AccountDevices> {
+        let login = self.login_account_cached().await;
+        let login = match login {
+            Err(err) if !is_govee_unreachable(&err) => return Err(err),
+            login => login,
+        };
+
+        let raw: JsonValue = cache_get(
+            CacheGetOptions {
+                topic: "undoc-api",
+                key: "device-list",
+                // Always fetch; the saved copy is only for when that fails
+                soft_ttl: Duration::ZERO,
+                hard_ttl: ONE_WEEK,
+                negative_ttl: Duration::from_secs(1),
+                allow_stale: true,
+            },
+            async {
+                let account = login.as_ref().map_err(|err| anyhow::anyhow!("{err:#}"))?;
+                Ok(CacheComputeResult::Value(
+                    self.get_device_list_json(&account.token).await?,
+                ))
+            },
+        )
+        .await?;
+
+        Ok(AccountDevices {
+            account: login.ok(),
+            devices: parse_device_list(&raw)?,
+        })
+    }
+
+    async fn get_device_list_json(&self, token: &str) -> anyhow::Result<JsonValue> {
         let response = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
             .build()?
@@ -946,9 +1011,10 @@ impl GoveeUndocumentedApi {
             self.invalidate_account_login();
         }
 
-        let resp: DevicesResponse = http_response_body(response).await?;
-
-        Ok(resp)
+        let raw: JsonValue = http_response_body(response).await?;
+        // Fail here rather than save a reply that cannot be used later
+        parse_device_list(&raw)?;
+        Ok(raw)
     }
 
     #[allow(dead_code)]
@@ -1399,6 +1465,10 @@ pub struct LoginAccountResponse {
     pub token: Redacted<String>,
     pub token_expire_cycle: u32,
     pub topic: Redacted<String>,
+}
+
+fn parse_device_list(raw: &JsonValue) -> anyhow::Result<DevicesResponse> {
+    from_json(serde_json::to_vec(raw)?)
 }
 
 #[derive(Deserialize, Debug)]
@@ -2838,5 +2908,70 @@ mod token_ttl_test {
         assert_eq!(token_ttl(now - 1, now), ONE_DAY);
         // seconds instead of milliseconds
         assert_eq!(token_ttl(1_700_000_000, now), ONE_DAY);
+    }
+}
+
+#[cfg(test)]
+mod offline_start_test {
+    use super::*;
+
+    #[test]
+    fn saved_device_list_keeps_redacted_fields() {
+        let raw: JsonValue =
+            serde_json::from_str(include_str!("../test-data/undoc-device-list.json")).unwrap();
+        let direct: DevicesResponse =
+            from_json(include_str!("../test-data/undoc-device-list.json")).unwrap();
+        let saved = parse_device_list(&raw).unwrap();
+
+        assert_eq!(saved.devices.len(), direct.devices.len());
+        for (saved, direct) in saved.devices.iter().zip(&direct.devices) {
+            assert_eq!(saved.device_topic().ok(), direct.device_topic().ok());
+        }
+    }
+
+    #[test]
+    fn only_outages_count_as_unreachable() {
+        let server = anyhow::Error::from(GoveeServerError("status 503".into()));
+        assert!(is_govee_unreachable(&server));
+        assert!(is_govee_unreachable(
+            &anyhow::Error::from(GoveeServerError("status 502".into())).context("login")
+        ));
+        assert!(is_govee_unreachable(
+            &NoCacheError(GoveeServerError("status 500".into()).into()).into()
+        ));
+        assert!(is_govee_unreachable(&classify_login_http_error(
+            503,
+            "x".into()
+        )));
+
+        assert!(!is_govee_unreachable(&classify_login_http_error(
+            401,
+            "x".into()
+        )));
+        assert!(!is_govee_unreachable(&anyhow::anyhow!("parse failure")));
+        let two_factor = TwoFactorLoginError {
+            status: 454,
+            code_was_set: false,
+            message: "2FA required",
+        };
+        assert!(!is_govee_unreachable(
+            &NoCacheError(two_factor.into()).into()
+        ));
+    }
+
+    #[tokio::test]
+    async fn refused_connection_is_unreachable() {
+        // Bind and drop a listener so that the port is very likely closed
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
+        let err = reqwest::Client::new()
+            .get(format!("http://127.0.0.1:{port}/"))
+            .send()
+            .await
+            .expect_err("nothing listens there");
+        assert!(is_govee_unreachable(&anyhow::Error::from(err)));
     }
 }
