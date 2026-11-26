@@ -43,21 +43,46 @@ via the [Home Assistant MQTT Integration](https://www.home-assistant.io/integrat
 * [Is my device supported?](docs/SKUS.md)
 * [Check out the FAQ](docs/FAQ.md)
 
-## Want to show your support or gratitude?
-
-It takes significant effort to build, maintain and support users of software
-like this. If you can spare something to say thanks, it is appreciated!
-
-* [Sponsor me on Github](https://github.com/sponsors/wez)
-* [Sponsor me on Patreon](https://patreon.com/WezFurlong)
-* [Sponsor me on Ko-Fi](https://ko-fi.com/wezfurlong)
-* [Sponsor me via liberapay](https://liberapay.com/wez)
-
 ## Credits
 
-This work is based on my earlier work with [Govee LAN
-Control](https://github.com/wez/govee-lan-hass/).
+This is a community fork, and most of the work in it was done by others.
 
-The AWS IoT support was made possible by the work of @bwp91 in
-[homebridge-govee](https://github.com/bwp91/homebridge-govee/).
+* **[Wez Furlong](https://github.com/wez)** created
+  [govee2mqtt](https://github.com/wez/govee2mqtt) and wrote the bridge itself.
+  It is released under the [MIT license](LICENSE.md).
+* **[Florian Horner](https://github.com/florianhorner)** maintains
+  [govee2mqtt-extended](https://github.com/florianhorner/govee2mqtt-extended),
+  where this fork's 2FA login, crash fixes, fan entities, scene controls, music
+  modes and much more were developed. They were brought over commit by commit,
+  keeping their authors.
+
+Others whose work arrived through `govee2mqtt-extended`:
+
+* [Paulo Silveira](https://github.com/peas): IoT work mode and LAN music
+  palettes
+* [jasonjrowe](https://github.com/jasonjrowe): lights without color modes
+  ([wez/govee2mqtt#663](https://github.com/wez/govee2mqtt/pull/663)) and effect
+  filtering
+* [adaofeliz](https://github.com/adaofeliz): effect list options
+  ([wez/govee2mqtt#662](https://github.com/wez/govee2mqtt/pull/662))
+* [sake1011](https://github.com/sake1011): 2FA login support
+* [theg1nger](https://github.com/theg1nger): UTF-8 fix
+  ([wez/govee2mqtt#606](https://github.com/wez/govee2mqtt/pull/606))
+
+Foundations:
+
+* [Govee LAN Control](https://github.com/wez/govee-lan-hass/), Wez's earlier
+  work that the bridge builds on
+* [homebridge-govee](https://github.com/bwp91/homebridge-govee/) by
+  [bwp91](https://github.com/bwp91), which made the AWS IoT support possible
+
+## Support the original author
+
+Building and supporting software like this takes significant effort. To say
+thanks to Wez, who wrote the bridge:
+
+* [Sponsor Wez on GitHub](https://github.com/sponsors/wez)
+* [Sponsor Wez on Patreon](https://patreon.com/WezFurlong)
+* [Sponsor Wez on Ko-Fi](https://ko-fi.com/wezfurlong)
+* [Sponsor Wez via Liberapay](https://liberapay.com/wez)
 
