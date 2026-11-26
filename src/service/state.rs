@@ -832,9 +832,10 @@ impl State {
         b: u8,
     ) -> anyhow::Result<()> {
         if let Some(lan_dev) = &device.lan_device {
-            if let Some(crate::service::quirks::LocalSegmentProtocol::HexaPtReal) =
-                device.local_segment_protocol()
-            {
+            if let (Some(crate::service::quirks::LocalSegmentProtocol::HexaPtReal), true) = (
+                device.local_segment_protocol(),
+                crate::ble::segment_fits_local_bitmask(segment),
+            ) {
                 let color = crate::lan_api::DeviceColor { r, g, b };
                 log::info!("Using LAN API to set {device} segment {segment} color");
                 lan_dev.send_segment_rgb(segment, color).await?;
@@ -860,9 +861,10 @@ impl State {
         percent: u8,
     ) -> anyhow::Result<()> {
         if let Some(lan_dev) = &device.lan_device {
-            if let Some(crate::service::quirks::LocalSegmentProtocol::HexaPtReal) =
-                device.local_segment_protocol()
-            {
+            if let (Some(crate::service::quirks::LocalSegmentProtocol::HexaPtReal), true) = (
+                device.local_segment_protocol(),
+                crate::ble::segment_fits_local_bitmask(segment),
+            ) {
                 if percent == 0 {
                     // On H6061, brightness=0 leaves a dim glow; rgb=(0,0,0) turns the panel off.
                     log::info!("Using LAN API to turn {device} segment {segment} off");

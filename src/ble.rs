@@ -939,6 +939,12 @@ fn finish(mut data: Vec<u8>) -> Vec<u8> {
     data
 }
 
+/// Whether a 0-based segment index can be addressed by the 2-byte bitmask.
+/// Larger layouts have to use the Platform API.
+pub fn segment_fits_local_bitmask(segment: u32) -> bool {
+    segment < 16
+}
+
 /// Build the 2-byte little-endian bitmask for 0-based segment indices (`0..16`).
 pub fn build_segment_bitmask(segments: &[u32]) -> anyhow::Result<[u8; 2]> {
     if segments.is_empty() {
@@ -946,7 +952,7 @@ pub fn build_segment_bitmask(segments: &[u32]) -> anyhow::Result<[u8; 2]> {
     }
     let mut mask: u16 = 0;
     for &seg in segments {
-        if seg >= 16 {
+        if !segment_fits_local_bitmask(seg) {
             anyhow::bail!("segment index {seg} out of range 0..16 for 2-byte bitmask");
         }
         mask |= 1u16 << seg;
