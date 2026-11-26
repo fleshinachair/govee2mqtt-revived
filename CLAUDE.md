@@ -1,4 +1,4 @@
-# govee2mqtt (fleshinachair fork)
+# Govee to MQTT (Revived)
 
 Rust bridge between Govee devices and Home Assistant over MQTT. Ships as a
 standalone container image and as a Home Assistant OS (HAOS) add-on. Binary and
@@ -12,9 +12,9 @@ The roadmap and current execution checklist are in `next_step.md`.
 | `upstream` | `wez/govee2mqtt` | Original project |
 | `extended` | `florianhorner/govee2mqtt-extended` | Sibling fork we cherry-pick from |
 
-This describes the tree at upstream `6f5a844`. Phase 1 of `next_step.md` adds
-large pieces (fan platform, command-route registry, music palettes, LAN circuit
-breaker, 2FA). Update this file as they land.
+The tree is upstream `6f5a844`, plus 32 commits picked from `extended`, plus
+fixes made here. The GitHub repository is to be renamed to
+`govee2mqtt-revived`; see `next_step.md` for publishing status.
 
 ## Engineering rules
 
@@ -31,7 +31,7 @@ These are strict. A change that breaks one is not ready to commit.
   string byte-slicing on external text. Device and preset names are often
   non-ASCII; byte-slicing them has crashed this bridge before.
 - `.unwrap()` and `.expect()` are fine in `#[cfg(test)]` code.
-- Upstream has 24 existing non-test `expect`/`panic!` sites. They are not
+- About a dozen non-test `expect`/`panic!` sites remain. They are not
   precedent. Do not add to them, and fix one when you touch its code path.
 
 ### 2. Gate every commit
@@ -44,7 +44,8 @@ cargo test
 cargo clippy --all-targets
 ```
 
-CI (`.github/workflows/pr.yml`) also runs `cargo fmt --all -- --check`, so run
+CI (`.github/workflows/pr.yml`) also runs `cargo fmt --all -- --check` and the
+all-features test and clippy runs, so run
 `cargo fmt --all` before pushing. If the gate cannot run on your machine, say so
 and stop. Do not commit unverified Rust.
 
@@ -128,6 +129,9 @@ that.
   accepting them (`K9_UPDATE_SNAPSHOTS=1 cargo test`).
 - For a new payload shape, add a sanitized fixture to `test-data/` and a test.
   Strip device IDs, tokens, IPs, and email addresses.
+- A test that builds a mosquitto client must wrap it in `ManuallyDrop`.
+  Destroying one hangs on Windows GNU builds.
+- A passing run must show passing tests. A killed `cargo` has exited 0.
 
 ## Architecture
 
@@ -166,7 +170,10 @@ exits (upstream #76). Cloud discovery repeats every 600 s.
 | `src/lan_api.rs` | LAN UDP discovery and control |
 | `src/ble.rs` | BLE-format packet codec (not a BLE transport) |
 | `src/rest_api.rs` | Client for the older REST API; nothing calls it |
-| `src/cache.rs` | SQLite-backed response cache |
+| `src/cache.rs` | SQLite-backed response cache, with an in-memory fallback for failed writes |
+| `src/music.rs` | Per-SKU music palette profiles for LAN |
+| `src/sensitive.rs` | Redaction of secrets in logs and errors |
+| `src/hass_mqtt/command_routes.rs` | The single list of command topics and routes |
 | `src/temperature.rs` | Temperature units and conversion |
 
 ### MQTT bridge
@@ -179,8 +186,10 @@ exits (upstream #76). Cloud discovery repeats every 600 s.
   `enumerator.rs` builds them from device capabilities and quirks.
 - Discovery configs go to `<discovery_prefix>/<component>/<unique_id>/config`.
   Availability is `gv2mqtt/availability`.
-- An advertised command topic with no matching route produces a control that
-  silently does nothing. Add both together.
+- Add command topics through `hass_mqtt/command_routes.rs`, which ties each
+  advertised topic to a route. Tests enforce this.
+- Fans and air purifiers also get a `fan` entity (`hass_mqtt/fan.rs`). It is
+  additive: switches and work-mode entities remain.
 - `unique_id` and topic shapes are user-facing API. Changing them breaks
   existing dashboards and automations.
 
@@ -200,7 +209,12 @@ Pushes status and accepts control. Needs the account login.
 
 **LAN API** (`lan_api.rs`). UDP: multicast scan to `239.255.255.250:4001`,
 replies on `4002`, commands to device port `4003`. Must be enabled per device in
-the Govee app, and needs host networking.
+the Govee app, and needs host networking. Status queries retry a bounded number
+of times, and a per-device circuit breaker backs off unresponsive devices.
+
+**2FA.** On login status 454 the bridge asks Govee to email a code, which the
+user supplies as `GOVEE_2FA_CODE`. Do not negative-cache those failures
+(`NoCacheError`).
 
 **BLE**. There is no BLE client, and BLE-only devices are not controllable.
 `ble.rs` encodes and decodes BLE-format frames that are carried over LAN or IoT
@@ -243,6 +257,7 @@ device family.
 SQLite file `govee2mqtt-cache.sqlite` in `GOVEE_CACHE_DIR` or the user cache
 directory (`/data` in containers). It holds login tokens and API responses with
 soft, hard, and negative TTLs, so treat it as secret. Failure to open it panics.
+If a write fails the value is kept in memory, and memory is read before disk.
 
 ### HTTP server
 
@@ -261,26 +276,33 @@ beyond the local network.
 
 ### HAOS add-on
 
-- `addon/Dockerfile` copies the binary out of the **published standalone image**
-  into a Home Assistant Debian base. An add-on build therefore packages whatever
-  that image reference holds, not your working tree.
+- `addon/Dockerfile` copies the binary out of a **published standalone image**
+  (`ARG GOVEE_IMAGE`) into a Home Assistant Debian base. A release pins it to
+  that release; a local build uses `:latest`, not your working tree.
 - `addon/config.yaml` defines the image name, version, options schema, and
   `host_network`. Supervisor pulls the exact `version` string as the image tag.
 - `addon/run.sh` maps add-on options to `GOVEE_*` env vars, waits for the MQTT
   broker, then runs `govee serve`.
+- `addon/DOCS.md` is what users see on the add-on's Documentation tab.
 - `repository.yaml` makes this repo installable as an add-on repository.
 
 ### CI and releases
 
 | Workflow | Does |
 |---|---|
-| `pr.yml` | On PRs: build, test, format check. No clippy. |
-| `build.yml` | Cross-compiles and publishes images; builds the add-on on tags. **Runs no tests.** |
+| `pr.yml` | Format, tests, clippy. Called by `build.yml`; also runs on pushes to `community-revival` |
+| `build.yml` | After tests: cross-compiles and publishes images; builds the add-on on tags |
 | `no-response.yml` | Closes issues awaiting a reply |
+
+Image names under `ghcr.io/fleshinachair/`:
+
+- `govee2mqtt-revived:latest`, `:main`, `:standalone-<tag>`: standalone
+- `govee2mqtt-revived:<tag>`: multi-arch add-on, which Supervisor pulls
+- `{amd64,aarch64}-govee2mqtt-revived`: per-arch add-on builds
+
+Never give a standalone image a bare release tag; it would collide with the
+add-on's. Release steps are in `next_step.md`.
 
 `scripts/tag-release.sh` creates a `YYYY.MM.DD-<sha8>` tag, writes that version
 into `addon/config.yaml` (`apply-tag.sh`), regenerates `addon/CHANGELOG.md` with
 git-cliff, and commits.
-
-Image names and repository URLs still point at `wez`. Rebranding is Phase 4 of
-`next_step.md`.

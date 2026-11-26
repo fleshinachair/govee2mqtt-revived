@@ -15,6 +15,58 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
+## Status: first pre-release prepared, not published
+
+Done on `community-revival`: Phase 0, all 32 Phase 1 picks, upstream PRs #739,
+#645 and #703, fixes for #732 and #722, the rebrand, CI, and the docs. The rest
+of Phases 2 and 3 waits until testers have this build.
+
+### To publish (each step needs the owner's go-ahead)
+
+1. Rename the GitHub fork to `govee2mqtt-revived`, then
+   `git remote set-url origin https://github.com/fleshinachair/govee2mqtt-revived.git`.
+2. Enable Issues.
+3. `git push origin community-revival`. This runs the tests on Linux and
+   publishes nothing. It is the first Linux build; fix what it finds.
+4. Fast-forward `main` and push it. This publishes the standalone image.
+5. Make the `govee2mqtt-revived` package public on GHCR.
+6. Tag from `main` (Git Bash):
+
+   ```sh
+   TAG=$(git -c core.abbrev=8 show -s --format=%cd-%h --date=format:%Y.%m.%d)
+   git tag "$TAG"
+   ./scripts/apply-tag.sh
+   git commit -am "Tag $TAG"
+   git push origin "$TAG"   # wait for the whole workflow to succeed
+   git push origin main     # only then advertise the version
+   ```
+
+   Do not use `scripts/tag-release.sh` for now: it needs Docker and regenerates
+   `addon/CHANGELOG.md`, replacing the hand-written entry.
+7. Create a GitHub release for the tag, marked **Pre-release**, using
+   `RELEASE_NOTES.md`.
+8. Install it on a real Home Assistant, migrating from wez's add-on, before
+   inviting testers.
+
+Until step 6 finishes, `addon/config.yaml` names a version that has no image.
+
+## Needs manual review
+
+- 2FA login, Tap-to-Run and every device behaviour: nothing has been run against
+  a real Govee account or hardware.
+- The migration guide's entity claims come from comparing `unique_id` formats
+  and the enumerator in code, not from a live Home Assistant.
+- The workflows have never run. YAML parses and the action tags exist.
+- Tests that build an MQTT client must not drop it: that hangs on Windows GNU
+  builds (`ManuallyDrop` in `service/hass.rs`).
+- #739 invalidates the account login when the shortcut call returns 401. If
+  Govee rejects only that endpoint for an account, this causes repeated logins.
+  Watch tester logs, especially on 2FA accounts.
+- #722 treats only a 400 as "no scenes". Other errors still fail the whole
+  list, deliberately, so that a partial list is never cached on a device.
+
+---
+
 ## Phase 0: working baseline (done)
 
 Verified on `6f5a844` with no source changes, on native Windows with MSYS2 and
@@ -116,14 +168,14 @@ Git often prints `error: could not apply ...` for conflicts in excluded docs
 files. The helper discards those. Act only on a `STOP` line.
 
 <!-- picks:start -->
-- [ ] **A. Crash fixes and H60B0**
+- [x] **A. Crash fixes and H60B0**
 
 ```bash
 pick f41ac85 &&                                   # H60B0 quirk
 pick 261eb48 - "wez/govee2mqtt#617, wez/govee2mqtt#618"   # panics, exit(1)
 ```
 
-- [ ] **B. Scene cycling and lint cleanup**
+- [x] **B. Scene cycling and lint cleanup**
 
 ```bash
 pick 0666c35 &&          # scene quick-cycle
@@ -133,7 +185,7 @@ pick 802c90d &&          # state.rs tests
 pick ec1afeb ours        # clearer add-on text and messages; keep our config.yaml identity
 ```
 
-- [ ] **C. Auth, 2FA, security, effects**
+- [x] **C. Auth, 2FA, security, effects**
 
 ```bash
 pick ee0cfb4 - "wez/govee2mqtt#647" &&            # v2 login, 454 detection
@@ -143,7 +195,7 @@ pick b0d3c71 &&                                   # clippy
 pick 6049c16 - "wez/govee2mqtt#663, wez/govee2mqtt#662, wez/govee2mqtt#589"
 ```
 
-- [ ] **D. Scene correctness, request IDs, web UI**
+- [x] **D. Scene correctness, request IDs, web UI**
 
 ```bash
 pick b84d79d &&   # keep active scene during animation
@@ -153,7 +205,7 @@ pick b2c7737 &&   # real request UUIDs
 pick e550412      # status badges, room grouping
 ```
 
-- [ ] **E. LAN resilience, IoT mode, music**
+- [x] **E. LAN resilience, IoT mode, music**
 
 ```bash
 pick fbbbae4 &&   # LAN retry bound and circuit breaker
@@ -164,7 +216,7 @@ pick d4819f1 - "wez/govee2mqtt#705" &&   # LAN music palette
 pick 4f36df1 - "wez/govee2mqtt#705"
 ```
 
-- [ ] **F. Auth hardening**
+- [x] **F. Auth hardening**
 
 ```bash
 pick 3c87648 - "wez/govee2mqtt#682" &&   # request the 2FA email
@@ -173,7 +225,7 @@ pick 67f5ae0 &&   # withhold authenticated response bodies
 pick 3c6c071      # lint
 ```
 
-- [ ] **G. Home Assistant entities**
+- [x] **G. Home Assistant entities**
 
 ```bash
 pick 571e392 &&          # music sensitivity, palette option
@@ -188,11 +240,11 @@ git commit --amend -m "build: bump async-trait to 0.1.92" \
 
 ### After the picks
 
-- [ ] Bring docs over and edit out `florianhorner` branding:
+- [x] Bring docs over and edit out `florianhorner` branding:
   `git checkout extended/main -- docs/CONFIG.md docs/LAN.md docs/MUSIC_MODE.md docs/SKUS.md docs/FAQ.md docs/LIVE_2FA_TEST.md`
-- [ ] Fix `LAN_HELP_URL` in `assets/components/devices.js`; it arrives pointing
+- [x] Fix `LAN_HELP_URL` in `assets/components/devices.js`; it arrives pointing
   at `florianhorner/govee2mqtt-extended`.
-- [ ] Update `CLAUDE.md` for the new modules.
+- [x] Update `CLAUDE.md` for the new modules.
 - [ ] Test 2FA against a real account (`docs/LIVE_2FA_TEST.md`).
 - [ ] Smoke test on real hardware before releasing. `extended` states that
   several changes were not hardware tested.
@@ -236,10 +288,10 @@ cargo check && cargo test && cargo clippy --all-targets &&
 
 All eight applied stacked on the Phase 1 result.
 
-- [ ] **#739** Tap-to-Run with the account token. Fixes #737 and #745; Govee has
+- [x] **#739** Tap-to-Run with the account token. Fixes #737 and #745; Govee has
   rejected the old token since early November 2026 and `extended` still uses it.
   **Highest priority.**
-- [ ] **#645** Accept localized (map) enum option names. Fixes #549, #565, #578:
+- [x] **#645** Accept localized (map) enum option names. Fixes #549, #565, #578:
   startup failure with H66A1 and similar. Needs `cargo fmt`. Its fallback
   stringifies unknown shapes; add a test with a fixture.
 - [ ] **#751** H605C quirk, enabling IoT control.
@@ -253,7 +305,7 @@ All eight applied stacked on the Phase 1 result.
 
 ### 2b. Worth having; needs a manual port
 
-- [ ] **#703** Keep results when the cache write fails (#702: repeated logins
+- [x] **#703** Keep results when the cache write fails (#702: repeated logins
   led to a 24-hour account lockout). Conflicts in `cache.rs`, which `extended`
   rewrote. Port first.
 - [ ] **#730** Exit if MQTT does not reconnect within 5 minutes. `hass.rs`.
@@ -309,10 +361,10 @@ Neither Phase 1 nor a clean Phase 2a PR resolves these. Each needs a test.
 
 ### 3a. Startup crashes and parsing
 
-- [ ] **#732** `pactType: -1` fails the whole device list. `DeviceSettings` and
+- [x] **#732** `pactType: -1` fails the whole device list. `DeviceSettings` and
   two sibling structs in `undoc_api.rs` use `Option<u32>`; use a signed or
   lenient type. Small, and fatal for affected users.
-- [ ] **#722** A 400 from the scene API removes all effects and snapshots.
+- [x] **#722** A 400 from the scene API removes all effects and snapshots.
   `get_scene_caps` uses `?` on both scene calls; degrade per source, as it
   already does for the undocumented source.
 - [ ] **#538** Malformed `segmentedColorRgb` schema breaks discovery. First
@@ -375,62 +427,18 @@ Neither Phase 1 nor a clean Phase 2a PR resolves these. Each needs a test.
 
 ---
 
-## Phase 4: CI/CD, Docker, and rebrand to `fleshinachair/govee2mqtt`
+## Phase 4: CI/CD, Docker, and rebrand (done, unpublished)
 
-### Decide first
+Add-on `govee2mqtt_revived`, image `ghcr.io/fleshinachair/govee2mqtt-revived`.
+Publishing steps are at the top of this file.
 
-- [ ] `wez` has not replied on #746, where you offered to take over (as of this
-  snapshot). Decide whether to wait, or publish as an independent fork now.
-- [ ] Add-on name (it must be distinguishable from upstream's).
-- [ ] Keep or remove `wez`'s sponsor links (`.github/FUNDING.yml`, `README.md`).
+Left for later:
 
-### GitHub settings
-
-- [ ] Enable Issues (currently disabled on the fork).
-- [ ] Confirm Actions can write packages.
-- [ ] Make the three GHCR packages public after the first publish.
-
-### CI
-
-- [ ] `build.yml`: `IMAGE: ghcr.io/fleshinachair/govee2mqtt`.
-- [ ] Replace `home-assistant/builder@2026.02.1` with the composable actions.
-  Port `d1c23f7` and `3172c08`. `extended` reports that the old builder has
-  failed base-image signature verification since June 2026 (`bf75797`), so the
-  inherited tag build would likely fail. Upstream has not tagged since March, so
-  this is untested there.
-- [ ] Pin the add-on's source image to the release being built
-  (`ARG GOVEE_IMAGE`). `:latest` is not refreshed on tag builds.
-- [ ] `pr.yml`: add `cargo clippy --all-targets` and an all-features test run;
-  run the Python test for the 2FA harness.
-- [ ] Make publishing depend on tests. `build.yml` runs none today.
-- [ ] Apply the action version bumps (#640, #641, #679, #680, #681) while there.
-- [ ] Review Dependabot branches already on `origin`.
-
-### Rebrand: file by file
-
-- [ ] `addon/config.yaml`: `name`, `image: ghcr.io/fleshinachair/govee2mqtt-{arch}`, `url`, `version`
-- [ ] `addon/Dockerfile`: source image
-- [ ] `addon/build.yaml`: `org.opencontainers.image.source`, cosign `identity`
-- [ ] `Dockerfile`: `org.opencontainers.image.source`
-- [ ] `repository.yaml`: name, url, maintainer
-- [ ] `docker-compose.yml`, `docs/DOCKER.md`: image
-- [ ] `docs/ADDON.md`: repository URL
-- [ ] `src/hass_mqtt/base.rs`: `URL` (shown to HA as the support URL)
-- [ ] `assets/components/devices.js`: `LAN_HELP_URL`
-- [ ] `.github/ISSUE_TEMPLATE/config.yml`: link
-- [ ] `scripts/cliff.toml`: issue link base. Keep old upstream numbers pointing at `wez`.
-- [ ] `README.md`: fork notice, credit to `wez` and `florianhorner`, migration steps
-- [ ] `LICENSE.md`: keep the existing copyright line
-- [ ] Check: `git grep -nIi 'wez\|florianhorner'` and justify every hit
-
-### First release
-
-- [ ] Tag with `scripts/tag-release.sh`; push only that tag.
-- [ ] Install the add-on on a real HAOS system from the fork URL.
-- [ ] Write migration notes. A different repository installs as a separate
-  add-on: users must stop the old one first, because two bridges would share the
-  same MQTT topics. Options need re-entering. Entity IDs should carry over since
-  they derive from device IDs; verify this.
+- Dependabot action and cargo bumps.
+- Run the Python test for the 2FA harness in CI.
+- `scripts/cliff.toml` still links `#N` to `wez`, which is right for upstream
+  numbers and wrong for this fork's own.
+- `.github/FUNDING.yml` keeps wez's sponsor links on purpose.
 
 ---
 
