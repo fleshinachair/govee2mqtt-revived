@@ -327,7 +327,9 @@ async fn connect_iot_client(
     .with_context(|| format!("failed to connect to IoT {}:8883 in AWS", res.endpoint))?;
     log::info!("Connected to IoT: {}:8883 {status}", res.endpoint);
 
-    let subscriptions = client.subscriber().expect("first and only");
+    let subscriptions = client
+        .subscriber()
+        .context("subscriber was already taken")?;
 
     state
         .set_iot_client(IotClient {
