@@ -555,6 +555,15 @@ fn merge_iot_packet(device: &mut Device, sku: &str, packet: &Packet) {
                 GoveeBlePacket::NotifyElementState(params) => {
                     device.set_element_state(params);
                 }
+                GoveeBlePacket::NotifyKettleBaseStatus(status) => {
+                    device.set_kettle_base_status(status);
+                }
+                GoveeBlePacket::NotifyKettleHeatingState(heating) => {
+                    device.set_kettle_heating_state(heating);
+                }
+                GoveeBlePacket::NotifyKettleKeepWarm(keep_warm) => {
+                    device.set_kettle_keep_warm(keep_warm);
+                }
                 GoveeBlePacket::NotifyHumidifierNightlight(nl) => {
                     state.brightness = nl.brightness;
                     state.color = DeviceColor {

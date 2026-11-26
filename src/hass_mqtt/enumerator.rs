@@ -1,4 +1,5 @@
 use crate::hass_mqtt::base::{Device, EntityConfig, Origin};
+use crate::hass_mqtt::binary_sensor::{KettleOnBase, KettleOutOfWater};
 use crate::hass_mqtt::button::ButtonConfig;
 use crate::hass_mqtt::climate::TargetTemperatureEntity;
 use crate::hass_mqtt::fan::Fan;
@@ -9,7 +10,8 @@ use crate::hass_mqtt::number::{MusicSensitivityNumber, WorkModeNumber};
 use crate::hass_mqtt::scene::SceneConfig;
 use crate::hass_mqtt::select::{SceneModeSelect, WorkModeSelect};
 use crate::hass_mqtt::sensor::{
-    CapabilitySensor, DeviceStatusDiagnostic, GlobalFixedDiagnostic, SceneInfoSensor,
+    CapabilitySensor, DeviceStatusDiagnostic, GlobalFixedDiagnostic, KettleHeatingState,
+    KettleKeepWarmRemaining, KettlePlacedOnBase, SceneInfoSensor,
 };
 use crate::hass_mqtt::switch::CapabilitySwitch;
 use crate::hass_mqtt::work_mode::ParsedWorkMode;
@@ -195,6 +197,14 @@ pub async fn enumerate_entities_for_device(
         DeviceType::Humidifier | DeviceType::Dehumidifier
     ) {
         entities.add(Humidifier::new(d, state).await?);
+    }
+
+    if matches!(d.sku.as_str(), "H7170" | "H7171" | "H7173") && d.undoc_device_info.is_some() {
+        entities.add(KettleOutOfWater::new(d, state));
+        entities.add(KettleOnBase::new(d, state));
+        entities.add(KettlePlacedOnBase::new(d, state));
+        entities.add(KettleHeatingState::new(d, state));
+        entities.add(KettleKeepWarmRemaining::new(d, state));
     }
 
     if d.device_type() != DeviceType::Light {
