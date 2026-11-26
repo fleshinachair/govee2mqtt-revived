@@ -1104,11 +1104,38 @@ pub struct IntegerRange {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct EnumOption {
+    #[serde(deserialize_with = "deserialize_name_field")]
     pub name: String,
     #[serde(default)]
     pub value: JsonValue,
     #[serde(flatten)]
     pub extras: HashMap<String, JsonValue>,
+}
+
+/// Some devices send an option name as a map of translations instead of a
+/// string. Prefer English, then Govee's own `key`; never fail the device list
+/// over a label.
+fn deserialize_name_field<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde_json::Value;
+
+    let v = Value::deserialize(deserializer)?;
+
+    match v {
+        Value::String(s) => Ok(s),
+        Value::Object(map) => {
+            if let Some(Value::String(en)) = map.get("en") {
+                Ok(en.clone())
+            } else if let Some(Value::String(key)) = map.get("key") {
+                Ok(key.clone())
+            } else {
+                Ok(serde_json::Value::Object(map).to_string())
+            }
+        }
+        _ => Ok(v.to_string()),
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -2041,5 +2068,36 @@ pub(crate) mod test {
             before,
             "a refused scene must send nothing"
         );
+    }
+
+    /// wez/govee2mqtt#549: translated option names used to fail the whole
+    /// device list.
+    #[test]
+    fn localized_option_names_issue_549() {
+        let cap: DeviceCapability = from_json(include_str!(
+            "../test-data/capability-localized-names-issue-549.json"
+        ))
+        .unwrap();
+        let Some(DeviceParameters::Struct { fields }) = &cap.parameters else {
+            panic!("expected STRUCT parameters, got {:?}", cap.parameters);
+        };
+        let DeviceParameters::Enum { options } = &fields[0].field_type else {
+            panic!("expected ENUM field, got {:?}", fields[0].field_type);
+        };
+        assert_eq!(options[0].name, "Game");
+    }
+
+    #[test]
+    fn option_name_fallbacks_never_fail() {
+        for (name, expected) in [
+            (r#""Plain""#, "Plain"),
+            (r#"{"en":"English","key":"Key"}"#, "English"),
+            (r#"{"de":"Spiel","key":"Key"}"#, "Key"),
+            (r#"{"de":"Spiel"}"#, r#"{"de":"Spiel"}"#),
+            ("7", "7"),
+        ] {
+            let option: EnumOption = from_json(format!(r#"{{"name":{name},"value":1}}"#)).unwrap();
+            assert_eq!(option.name, expected);
+        }
     }
 }

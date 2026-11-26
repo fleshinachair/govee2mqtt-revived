@@ -1,0 +1,28 @@
+{
+  "type": "devices.capabilities.movie_setting",
+  "instance": "movieMode",
+  "parameters": {
+    "dataType": "STRUCT",
+    "fields": [
+      {
+        "fieldName": "moveMode",
+        "dataType": "ENUM",
+        "options": [
+          {
+            "name": {
+              "de": "Spiel",
+              "ja": "ゲーム",
+              "en": "Game",
+              "it": "Gioco",
+              "fr": "Jeu",
+              "key": "Game",
+              "es": "Juego"
+            },
+            "value": 0
+          }
+        ],
+        "required": true
+      }
+    ]
+  }
+}
