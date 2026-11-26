@@ -1140,7 +1140,8 @@ pub async fn spawn_hass_integration(
     args: &HassArguments,
 ) -> anyhow::Result<()> {
     let client = Client::with_id(
-        &format!("govee2mqtt/{}", uuid::Uuid::new_v4().simple()),
+        // Some brokers reject a "/" in a client id
+        &format!("govee2mqtt-{}", uuid::Uuid::new_v4().simple()),
         true,
     )?;
 
