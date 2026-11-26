@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## Second pre-release
 
 - Fix crashes when the cache cannot be opened or Govee sends a malformed device
 - Start during a Govee outage using the device list from the last start
@@ -11,6 +11,8 @@
 - H5086 energy monitoring, H717x kettle sensors, H1270 main and halo lights,
   H6098 video mode
 - None of this has been tested on real hardware
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
 
 ## First pre-release of Govee to MQTT (Revived)
 

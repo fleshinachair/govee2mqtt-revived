@@ -1,4 +1,4 @@
-# Govee to MQTT (Revived): first pre-release
+# Govee to MQTT (Revived): second pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
@@ -13,6 +13,41 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the first pre-release
+
+**None of this has run against a real Govee device or account yet.**
+
+### Fixes
+
+| Problem | Upstream |
+|---|---|
+| Bridge stops at startup during a Govee outage | wez#76 |
+| Crash when the cache database cannot be opened | wez#536 |
+| One malformed device or capability fails the whole device list | wez#538 |
+| Zone and DreamView switches always show unknown; they now show what you last set | wez#712, wez#719 |
+| Offline devices still look controllable (new option, off by default) | wez#551 |
+| Brokers that reject the MQTT client id | wez#659, wez#661 |
+
+### Features
+
+| Feature | Upstream |
+|---|---|
+| `transition` (fade) on lights controlled over the LAN | PR wez#726 by Jacob Hausler |
+| Device events, such as water empty or presence | PR wez#693 by Gary T. Giesen (wez#343) |
+| Local per-segment control on H6061 and H6066 | PR wez#752 by pixelowaty |
+| H5086 plug energy monitoring | PR wez#717 by Sebastian Noack (wez#416, wez#186) |
+| H717x kettle sensors | PR wez#734 |
+| H1270 main and halo lights | PR wez#715 by Daniel Dubrovski |
+| H6098 Video Mode switch | from PR wez#690 by kencarsick |
+| H6006, H600D, H601B, H6039 and H616D | wez#621, wez#605, wez#577 |
+
+Several pull requests were changed before being taken; each commit says how.
+
+### New options
+
+`hass_discovery_prefix` (wez#116), `offline_unavailable` and
+`disable_platform_mqtt`. See [docs/CONFIG.md](docs/CONFIG.md).
 
 ## Fixes
 
@@ -105,17 +140,16 @@ wez#424, wez#200).
 
 ## Known problems still open
 
-* The bridge exits at startup if Govee's servers cannot be reached (wez#76).
-* It crashes at startup if the cache database cannot be opened (wez#536).
+* The very first start still needs Govee to be reachable, and the saved device
+  list lasts about a week without a successful fetch (wez#76).
 * High CPU use after an MQTT broker restart has been reported (wez#749).
-* Offline devices still appear controllable; only the Status sensor says so.
-* Most missing device models are not added yet.
+* Many missing device models are not added yet.
 
 ## Not in this build
 
-Upstream feature pull requests: wez#752, wez#736, wez#734, wez#726, wez#724,
-wez#717, wez#715, wez#698, wez#693, wez#690. Remaining issues are listed in
-[next_step.md](next_step.md).
+Upstream pull requests wez#724 (scene speed) and wez#698 (H1310 fan), which
+need testing on those devices first, and wez#736, for which a smaller fix was
+made instead. Remaining issues are listed in [next_step.md](next_step.md).
 
 ## Not taken from govee2mqtt-extended
 
@@ -124,6 +158,6 @@ The CI setup here borrows their add-on build approach.
 
 ## How it was checked
 
-`cargo test` and `cargo clippy --all-targets` ran before every code commit, on
+`cargo test` and `cargo clippy --all-targets` ran before code commits, on
 Windows. The release workflow runs the tests again on Linux and publishes
 nothing if they fail.

@@ -42,8 +42,8 @@ hardware, so your report is the first real test. "It works" is useful too.
 
 ## Newer changes
 
-These are not in `2026.11.26-dd7edbbb`. Check them once a later version that
-lists them in the add-on changelog is published.
+These are new in the second pre-release. The first one,
+`2026.11.26-dd7edbbb`, does not have them.
 
 | You have | Try | Tell us |
 |---|---|---|
