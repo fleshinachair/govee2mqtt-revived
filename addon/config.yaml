@@ -54,3 +54,4 @@ schema:
   disable_effects: "bool?"
   allowed_effects: "str?"
   music_palette: "bool?"
+  offline_unavailable: "bool?"

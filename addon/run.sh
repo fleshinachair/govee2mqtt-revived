@@ -125,6 +125,11 @@ if bashio::config.has_value music_palette ; then
   export GOVEE_MUSIC_PALETTE
 fi
 
+if bashio::config.has_value offline_unavailable ; then
+  GOVEE_OFFLINE_UNAVAILABLE="$(bashio::config offline_unavailable)"
+  export GOVEE_OFFLINE_UNAVAILABLE
+fi
+
 if bashio::config.has_value http_addr ; then
   HTTP_ADDR="$(bashio::config http_addr)"
   export HTTP_ADDR

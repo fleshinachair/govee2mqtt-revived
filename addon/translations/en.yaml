@@ -10,6 +10,11 @@ configuration:
     description: >-
       Leave blank unless you changed the MQTT discovery prefix in Home
       Assistant (default "homeassistant").
+  offline_unavailable:
+    name: Unavailable When Offline
+    description: >-
+      Set to true to show a device as unavailable when Govee reports it
+      offline. Cloud-only devices can take up to 15 minutes to change.
   govee_email:
     name: Govee Account Email
     description: >-

@@ -152,6 +152,20 @@ app, leave these fields blank — they are filled in automatically.
 |`--mqtt-password`|`GOVEE_MQTT_PASSWORD`|`mqtt_password`|*(none)*|Password, if your broker requires authentication|
 |`--hass-discovery-prefix`|`GOVEE_HASS_DISCOVERY_PREFIX`|`hass_discovery_prefix`|`homeassistant`|Must match the discovery prefix of Home Assistant's MQTT integration|
 
+## Offline devices
+
+By default a device that has lost power keeps its last state in Home Assistant,
+and its **Status** sensor shows Offline.
+
+|ENV|App Config|Default|Purpose|
+|---|----------|-------|-------|
+|`GOVEE_OFFLINE_UNAVAILABLE=true`|`offline_unavailable`|*(off)*|Show a device's entities as unavailable while Govee reports it offline|
+
+This relies on the Platform API's online flag, which is refreshed about every 15
+minutes for cloud-only devices and is not always accurate. A device known only
+over the LAN is never marked unavailable. The Status sensor and the **Request
+Platform API State** button stay usable.
+
 ## Effects (Scenes)
 
 By default Govee2MQTT publishes each light's full list of scene "effects" to

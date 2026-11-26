@@ -438,12 +438,32 @@ impl HassClient {
             .await
             .context("online -> availability_topic")?;
 
+        for device in state.devices().await {
+            self.publish_device_availability(&device).await?;
+        }
+
         // report initial state
         log::trace!("register_with_hass: reporting state");
         entities.notify_state(self).await.context("notify_state")?;
 
         log::trace!("register_with_hass: done");
 
+        Ok(())
+    }
+
+    /// Retained, so that Home Assistant gets it whenever it subscribes. A
+    /// stopped bridge is still covered by the bridge availability topic.
+    async fn publish_device_availability(&self, device: &ServiceDevice) -> anyhow::Result<()> {
+        if !offline_unavailable_enabled() {
+            return Ok(());
+        }
+        let topic = device_availability_topic_for_id(&topic_safe_id(device));
+        let online = device.device_state().and_then(|state| state.online);
+        let payload = device_availability_payload(online);
+        log::trace!("{topic} -> {payload}");
+        self.client
+            .publish(topic, payload, QoS::AtMostOnce, true)
+            .await?;
         Ok(())
     }
 
@@ -490,6 +510,8 @@ impl HassClient {
         device: &ServiceDevice,
         state: &StateHandle,
     ) -> anyhow::Result<()> {
+        self.publish_device_availability(device).await?;
+
         let mut entities = EntityList::new();
         enumerate_entities_for_device(device, state, &mut entities).await?;
         entities.notify_state(self).await?;
@@ -539,6 +561,27 @@ pub fn light_segment_state_topic(device: &ServiceDevice, segment: u32) -> String
 /// via last-will
 pub fn availability_topic() -> String {
     "gv2mqtt/availability".to_string()
+}
+
+pub fn device_availability_topic_for_id(id: &str) -> String {
+    format!("gv2mqtt/{id}/availability")
+}
+
+/// Whether devices that Govee reports as offline become unavailable in Home
+/// Assistant. Off by default, because Govee's report is not always right.
+pub fn offline_unavailable_enabled() -> bool {
+    std::env::var("GOVEE_OFFLINE_UNAVAILABLE")
+        .map(|v| v == "true")
+        .unwrap_or(false)
+}
+
+/// Only an explicit "offline" counts; LAN and IoT updates do not say.
+fn device_availability_payload(online: Option<bool>) -> &'static str {
+    if online == Some(false) {
+        "offline"
+    } else {
+        "online"
+    }
 }
 
 pub fn oneclick_topic() -> anyhow::Result<CommandTopic> {
@@ -2072,5 +2115,17 @@ mod discovery_prefix_test {
         assert_eq!(normalize_discovery_prefix(Some("  ")), "homeassistant");
         assert_eq!(normalize_discovery_prefix(Some("indigo/")), "indigo");
         assert_eq!(normalize_discovery_prefix(Some("/ha/disco")), "ha/disco");
+    }
+}
+
+#[cfg(test)]
+mod device_availability_test {
+    use super::device_availability_payload;
+
+    #[test]
+    fn only_an_explicit_offline_report_counts() {
+        assert_eq!(device_availability_payload(Some(false)), "offline");
+        assert_eq!(device_availability_payload(Some(true)), "online");
+        assert_eq!(device_availability_payload(None), "online");
     }
 }
