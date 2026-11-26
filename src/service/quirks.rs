@@ -88,6 +88,10 @@ impl Quirk {
         Self::device(sku, DeviceType::Thermometer, "mdi:thermometer")
     }
 
+    pub fn air_quality_monitor<SKU: Into<Cow<'static, str>>>(sku: SKU) -> Self {
+        Self::device(sku, DeviceType::AirQualityMonitor, "mdi:molecule-co2")
+    }
+
     pub fn with_rgb(mut self) -> Self {
         self.supports_rgb = true;
         self
@@ -278,6 +282,18 @@ fn load_quirks() -> HashMap<String, Quirk> {
         Quirk::thermometer("H5179")
             .with_platform_temperature_sensor_units(TemperatureUnits::Fahrenheit)
             .with_platform_humidity_sensor_units(HumidityUnits::RelativePercent),
+        // <https://github.com/wez/govee2mqtt/issues/634>
+        Quirk::air_quality_monitor("H5140")
+            .with_platform_temperature_sensor_units(TemperatureUnits::Fahrenheit)
+            .with_platform_humidity_sensor_units(HumidityUnits::RelativePercent)
+            .with_iot_api_support(true),
+        // <https://github.com/wez/govee2mqtt/issues/561>
+        // The H5106 is primarily a BLE device, but it answers on the Platform
+        // API. Do not mark it ble_only: no entities would be created.
+        Quirk::air_quality_monitor("H5106")
+            .with_platform_temperature_sensor_units(TemperatureUnits::Fahrenheit)
+            .with_platform_humidity_sensor_units(HumidityUnits::RelativePercent)
+            .with_iot_api_support(true),
         Quirk::device("H7170", DeviceType::Kettle, "mdi:kettle")
             .with_platform_temperature_sensor_units(TemperatureUnits::Fahrenheit),
         Quirk::device("H7171", DeviceType::Kettle, "mdi:kettle")
@@ -372,5 +388,19 @@ mod test {
         assert_eq!(quirk.device_type, DeviceType::Light);
         assert_eq!(quirk.icon.as_ref(), FLOOR_LAMP);
         assert!(quirk.lan_api_capable);
+    }
+
+    #[test]
+    fn air_quality_monitors_are_recognised_and_get_entities() {
+        let parsed: DeviceType =
+            serde_json::from_str("\"devices.types.air_quality_monitor\"").unwrap();
+        assert_eq!(parsed, DeviceType::AirQualityMonitor);
+
+        for sku in ["H5140", "H5106"] {
+            let quirk = resolve_quirk(sku).expect("quirk");
+            assert_eq!(quirk.device_type, DeviceType::AirQualityMonitor, "{sku}");
+            // ble_only would stop any entity from being created
+            assert!(!quirk.ble_only, "{sku}");
+        }
     }
 }

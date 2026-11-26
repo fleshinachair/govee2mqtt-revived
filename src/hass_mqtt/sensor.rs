@@ -213,6 +213,7 @@ impl CapabilitySensor {
         let unit_of_measurement = match instance.instance.as_str() {
             "sensorTemperature" => Some(state.get_temperature_scale().await.unit_of_measurement()),
             "sensorHumidity" => Some("%"),
+            "carbonDioxideConcentration" => Some("ppm"),
             // Deliberately no unit for filterLifeTime. The instance name says
             // *time*, the one live H7124 reading was `100`, and nothing in the
             // repo pins the scale -- so `%` would be the same unverified claim
@@ -226,6 +227,7 @@ impl CapabilitySensor {
         let device_class = match instance.instance.as_str() {
             "sensorTemperature" => Some(DEVICE_CLASS_TEMPERATURE),
             "sensorHumidity" => Some(DEVICE_CLASS_HUMIDITY),
+            "carbonDioxideConcentration" => Some("carbon_dioxide"),
             // Deliberately no `aqi` device class for airQuality: Govee reports a
             // vendor-specific index, and nobody has confirmed how it maps onto a
             // standard AQI scale (upstream wez/govee2mqtt#369). Claiming the class
@@ -234,15 +236,18 @@ impl CapabilitySensor {
         };
 
         let state_class = match instance.instance.as_str() {
-            "sensorTemperature" | "sensorHumidity" | "airQuality" | "filterLifeTime" => {
-                Some(StateClass::Measurement)
-            }
+            "sensorTemperature"
+            | "sensorHumidity"
+            | "carbonDioxideConcentration"
+            | "airQuality"
+            | "filterLifeTime" => Some(StateClass::Measurement),
             _ => None,
         };
 
         let name = match instance.instance.as_str() {
             "sensorTemperature" => "Temperature".to_string(),
             "sensorHumidity" => "Humidity".to_string(),
+            "carbonDioxideConcentration" => "CO\u{2082}".to_string(),
             "online" => "Connected to Govee Cloud".to_string(),
             "airQuality" => "Air Quality".to_string(),
             "filterLifeTime" => "Filter Life".to_string(),
@@ -863,6 +868,19 @@ mod test {
              airQuality arm refuses to make -- and a wrong unit on a \
              statistics source needs a manual purge to correct: {json}"
         );
+    }
+
+    #[tokio::test]
+    async fn carbon_dioxide_is_a_ppm_measurement() {
+        let json = discovery_payload_for("carbonDioxideConcentration").await;
+
+        assert_eq!(json["name"], "CO\u{2082}");
+        assert_eq!(json["unit_of_measurement"], "ppm");
+        assert_eq!(json["device_class"], "carbon_dioxide");
+        assert_eq!(json["state_class"], "measurement");
+
+        // The device class requires a bare number
+        assert_eq!(scalar_state_value(&json!({"value": 830})), "830");
     }
 
     /// Regression guard: the new arms must not reclassify every other
