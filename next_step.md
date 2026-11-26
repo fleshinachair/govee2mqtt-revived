@@ -15,25 +15,25 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: first pre-release being published
+## Status: first pre-release published, waiting for its first real test
 
-Done on `community-revival`: Phase 0, all 32 Phase 1 picks, all of Phase 2a and
-2b, fixes for #732 and #722, the rebrand, CI, and the docs. Phase 2c features
-and Phase 3 wait until testers have this build. Tester checklist:
-`TESTING.md`.
+Published on 2026-11-26 as `2026.11.26-dd7edbbb`: Phase 0, all 32 Phase 1
+picks, all of Phase 2a and 2b, fixes for #732 and #722, the rebrand, CI, and the
+docs. The images build for amd64 and arm64 and can be pulled anonymously. Phase
+2c features and Phase 3 wait until testers have this build.
 
-The owner approved steps 4 to 7 on 2026-11-26.
+- [x] Fork renamed to `govee2mqtt-revived`, Issues enabled
+- [x] `main` pushed, add-on image published, GitHub pre-release created
+- [ ] Owner installs it on a real Home Assistant, migrating from wez's add-on,
+  and works through `TESTING.md`
+- [ ] Invite testers
 
-### To publish (each step needs the owner's go-ahead)
+### To release again (each push needs the owner's go-ahead)
 
-1. (done) Rename the GitHub fork to `govee2mqtt-revived`, then
-   `git remote set-url origin https://github.com/fleshinachair/govee2mqtt-revived.git`.
-2. (done) Enable Issues.
-3. (done, tests passed on Linux) `git push origin community-revival`. This runs
-   the tests and publishes nothing.
-4. Fast-forward `main` and push it. This publishes the standalone image.
-5. Make the `govee2mqtt-revived` package public on GHCR.
-6. Tag from `main` (Git Bash):
+1. Push `community-revival` and wait for the tests to pass.
+2. Update `RELEASE_NOTES.md` and `addon/CHANGELOG.md`.
+3. Fast-forward `main` and push it. This publishes the standalone image.
+4. Tag from `main` (Git Bash):
 
    ```sh
    TAG=$(git -c core.abbrev=8 show -s --format=%cd-%h --date=format:%Y.%m.%d)
@@ -46,13 +46,8 @@ The owner approved steps 4 to 7 on 2026-11-26.
 
    Do not use `scripts/tag-release.sh` for now: it needs Docker and regenerates
    `addon/CHANGELOG.md`, replacing the hand-written entry.
-7. Create a GitHub release for the tag, marked **Pre-release**, using
-   `RELEASE_NOTES.md`.
-8. Install it on a real Home Assistant, migrating from wez's add-on, and work
-   through `TESTING.md` before
-   inviting testers.
-
-Until step 6 finishes, `addon/config.yaml` names a version that has no image.
+5. Create a GitHub release for the tag. Links in a release body must be
+   absolute.
 
 ## Needs manual review
 
@@ -60,7 +55,8 @@ Until step 6 finishes, `addon/config.yaml` names a version that has no image.
   a real Govee account or hardware.
 - The migration guide's entity claims come from comparing `unique_id` formats
   and the enumerator in code, not from a live Home Assistant.
-- The workflows have never run. YAML parses and the action tags exist.
+- The test and release workflows have passed. The pull-request add-on build
+  and `no-response.yml` have never run.
 - Tests that build an MQTT client must not drop it: that hangs on Windows GNU
   builds (`ManuallyDrop` in `service/hass.rs`).
 - #739 invalidates the account login when the shortcut call returns 401. If
@@ -69,8 +65,8 @@ Until step 6 finishes, `addon/config.yaml` names a version that has no image.
 - #722 treats only a 400 as "no scenes". Other errors still fail the whole
   list, deliberately, so that a partial list is never cached on a device.
 - #723: replacing a dead IoT client destroys the old mosquitto client. That has
-  not run on Linux or against AWS. Its TLS test asserts how libmosquitto
-  behaves and has only passed on Windows.
+  not run on Linux or against AWS. Its TLS test, which asserts how
+  libmosquitto behaves, passes on Windows and Linux.
 - #716: only the H6022 scene prefix is reported as hardware tested.
 - #730: a broker outage over 5 minutes exits the bridge; it needs Watchdog or a
   restart policy.
@@ -82,7 +78,7 @@ Until step 6 finishes, `addon/config.yaml` names a version that has no image.
 
 Verified on `6f5a844` with no source changes, on native Windows with MSYS2 and
 the GNU toolchain (Rust 1.100.0). Commands are in `CLAUDE.md`. Linux behaviour
-is not verified locally; the first CI run will be the first Linux build.
+is not verified locally; CI is the check for it.
 
 - [x] `cargo check`
 - [x] `cargo test`: 31 passed, 0 failed

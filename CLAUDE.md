@@ -8,13 +8,13 @@ The roadmap and current execution checklist are in `next_step.md`.
 
 | Remote | Repository | Role |
 |---|---|---|
-| `origin` | `fleshinachair/govee2mqtt` | This fork |
+| `origin` | `fleshinachair/govee2mqtt-revived` | This fork |
 | `upstream` | `wez/govee2mqtt` | Original project |
 | `extended` | `florianhorner/govee2mqtt-extended` | Sibling fork we cherry-pick from |
 
 The tree is upstream `6f5a844`, plus 32 commits picked from `extended`, plus
-open upstream pull requests and fixes made here. The GitHub repository is to be renamed to
-`govee2mqtt-revived`; see `next_step.md` for publishing status.
+open upstream pull requests and fixes made here. See `next_step.md` for release
+status.
 
 ## Engineering rules
 
