@@ -28,6 +28,7 @@ const APP_VERSION: &str = "7.4.10";
 const HALF_DAY: Duration = Duration::from_secs(3600 * 12);
 const ONE_DAY: Duration = Duration::from_secs(86400);
 const ONE_WEEK: Duration = Duration::from_secs(86400 * 7);
+const ONE_YEAR: Duration = Duration::from_secs(86400 * 365);
 const FIFTEEN_MINS: Duration = Duration::from_secs(60 * 15);
 const MAX_LOGIN_BODY_BYTES: usize = 64 * 1024;
 
@@ -624,6 +625,36 @@ impl GoveeUndocumentedApi {
         crate::cache::invalidate_key("undoc-api", "account-info").ok();
     }
 
+    /// A stable stand-in for the account's email address, which must not be
+    /// written to the cache or the log.
+    fn account_hash(&self) -> String {
+        Uuid::new_v5(&Uuid::NAMESPACE_DNS, self.email.to_lowercase().as_bytes())
+            .simple()
+            .to_string()
+    }
+
+    /// Drop the cached login if it was made for a different email address.
+    /// A purge keeps the login, so without this a changed account would carry
+    /// on using the previous one.
+    ///
+    /// A cache with no record of the account, as written by earlier versions,
+    /// is taken to belong to the configured one, so that upgrading does not ask
+    /// for a new verification code.
+    fn forget_login_of_other_account(&self, cache: &sqlite_cache::Cache) -> anyhow::Result<()> {
+        let topic = cache.topic("undoc-api")?;
+        let account = self.account_hash();
+        match topic.get("account-info-owner")? {
+            Some(owner) if owner.data == account.as_bytes() => return Ok(()),
+            Some(_) => {
+                log::info!("The Govee account has changed; signing in again");
+                topic.delete("account-info")?;
+            }
+            None => {}
+        }
+        topic.set("account-info-owner", account.as_bytes(), ONE_YEAR)?;
+        Ok(())
+    }
+
     /// Cache entries that hold this account's sign-in state rather than device
     /// data: the login itself, and the record that a 2FA code was just
     /// requested. A cache purge keeps them, because replacing either one needs
@@ -763,8 +794,7 @@ impl GoveeUndocumentedApi {
     /// Hashed rather than holding the address in plain text, because this key is
     /// stored in the on-disk cache and appears in error messages.
     fn verification_request_cache_key(&self) -> String {
-        let id = Uuid::new_v5(&Uuid::NAMESPACE_DNS, self.email.to_lowercase().as_bytes());
-        format!("2fa-verification-request-{}", id.simple())
+        format!("2fa-verification-request-{}", self.account_hash())
     }
 
     fn invalidate_2fa_request_cache(&self, cache: &sqlite_cache::Cache) -> anyhow::Result<()> {
@@ -935,6 +965,9 @@ impl GoveeUndocumentedApi {
     }
 
     pub async fn login_account_cached(&self) -> anyhow::Result<LoginAccountResponse> {
+        if let Err(err) = self.forget_login_of_other_account(&CACHE.load()) {
+            log::warn!("Could not check which account the cached login is for: {err:#}");
+        }
         cache_get(
             CacheGetOptions {
                 topic: "undoc-api",
@@ -2185,6 +2218,32 @@ mod test {
             exceeds_verification_body_cap(usize::MAX, 1),
             "must not wrap"
         );
+    }
+
+    #[test]
+    fn a_cached_login_is_dropped_only_when_the_account_changes() {
+        let cache = fresh_cache();
+        let topic = cache.topic("undoc-api").expect("open topic");
+        let stored = || topic.get("account-info").expect("read login").is_some();
+        topic
+            .set("account-info", b"login", ONE_WEEK)
+            .expect("seed a login");
+
+        // A cache from an earlier version has no record of the account
+        GoveeUndocumentedApi::new("a@b.com", "pw")
+            .forget_login_of_other_account(&cache)
+            .expect("adopt the login");
+        assert!(stored(), "upgrading must keep the login");
+
+        GoveeUndocumentedApi::new("A@B.com", "new password")
+            .forget_login_of_other_account(&cache)
+            .expect("same account");
+        assert!(stored(), "the same address is the same account");
+
+        GoveeUndocumentedApi::new("other@example.com", "pw")
+            .forget_login_of_other_account(&cache)
+            .expect("changed account");
+        assert!(!stored(), "another account must sign in for itself");
     }
 
     #[tokio::test]
