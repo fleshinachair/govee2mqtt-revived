@@ -31,6 +31,8 @@ jobs:
         run: cargo test --all --all-features
       - name: Lint
         run: cargo clippy --all-targets --all-features
+      - name: Test the 2FA login harness
+        run: python3 scripts/test_live_2fa.py
       # A release tag must be the name apply-tag.sh derives from its commit,
       # because that is the image tag Supervisor will pull.
       - name: Check the release tag name
