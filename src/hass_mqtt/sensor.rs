@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::{json, Value as JsonValue};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Serialize, Clone, Debug)]
 pub struct SensorConfig {
@@ -656,6 +657,7 @@ pub struct SceneInfoSensor {
     device_id: String,
     device_topic_id: String,
     state: StateHandle,
+    catalog_sent: AtomicBool,
 }
 
 impl SceneInfoSensor {
@@ -684,6 +686,7 @@ impl SceneInfoSensor {
             },
             device_id: device.id.to_string(),
             state: state.clone(),
+            catalog_sent: AtomicBool::new(false),
         }
     }
 }
@@ -694,7 +697,11 @@ impl EntityInstance for SceneInfoSensor {
         self.sensor.publish(state, client).await?;
 
         // Publish scene catalog as retained MQTT message during registration (once),
-        // not on every state change. HA automations can subscribe to this topic.
+        // not on every state change. HA automations can subscribe to this topic,
+        // so a repeated registration must not send it again.
+        if self.catalog_sent.load(Ordering::Relaxed) {
+            return Ok(());
+        }
         if let Some(device) = self.state.device_by_id(&self.device_id).await {
             let catalog = self
                 .state
@@ -703,8 +710,9 @@ impl EntityInstance for SceneInfoSensor {
                 .unwrap_or_default();
             if !catalog.is_empty() {
                 let catalog_topic = format!("gv2mqtt/{}/scene-catalog", self.device_topic_id);
-                if let Err(err) = client.publish_obj_retained(&catalog_topic, &catalog).await {
-                    log::warn!("Failed to publish scene catalog: {err:#}");
+                match client.publish_obj_retained(&catalog_topic, &catalog).await {
+                    Ok(()) => self.catalog_sent.store(true, Ordering::Relaxed),
+                    Err(err) => log::warn!("Failed to publish scene catalog: {err:#}"),
                 }
             }
         }

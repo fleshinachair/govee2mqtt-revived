@@ -17,6 +17,11 @@ References such as `wez#739` are issues and pull requests in
 
 ## Not released yet
 
+* Lights could stay `unavailable` after a Home Assistant restart until the
+  add-on was restarted too; seen with the third pre-release. The bridge now
+  sends Home Assistant its entities again every minute, so they come back by
+  themselves. One side effect: a device you delete in Home Assistant returns
+  within a minute, so disable it instead.
 * Light colour temperature is exchanged with Home Assistant in Kelvin, so limits
   are exact (wez#731). **Needs Home Assistant 2025.2 or newer.**
 * 35 light models seen on the LAN in upstream reports are now in the model

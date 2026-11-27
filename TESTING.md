@@ -63,6 +63,7 @@ Not released yet:
 | You have | Try | Tell us |
 |---|---|---|
 | Any light with colour temperature | Set the warmest and coolest values | Whether the limits and the light look right |
+| Any device | Restart or update Home Assistant, and leave the add-on alone | Whether everything comes back, and how long it takes |
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 

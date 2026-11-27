@@ -31,6 +31,12 @@ the reporter's hardware or account. If one of these is yours,
 Some of these are only *expected* to be fixed, because a change addresses the
 cause the report describes.
 
+[#110](https://github.com/wez/govee2mqtt/issues/110),
+[#227](https://github.com/wez/govee2mqtt/issues/227) and
+[#572](https://github.com/wez/govee2mqtt/issues/572), about entities staying
+unavailable, need a change that is not released yet: with the third pre-release
+it still happened after a Home Assistant restart.
+
 ## Needs someone with the device or account
 
 | Problem | Issues |
