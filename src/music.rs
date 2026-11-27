@@ -64,6 +64,19 @@ static MUSIC_PROFILES: &[SkuMusicProfiles] = &[
             ("Shiny", 0x31),
         ],
     },
+    // H60B2, firmware 1.00.07, same owner. Bloom is from an app snapshot;
+    // Rhythm and Stippling were calibrated in 2026-08. All three have been
+    // driven with palettes over the LAN since then. On 2026-11-27 a
+    // two-colour Bloom palette sent as the classic frames alone lit all
+    // three sections, the same as with the `33 36 <zone> 01` frames the
+    // app adds for this model. Hopping (0x48) is left out: on this lamp it
+    // needs a background colour after the palette, which the encoder does
+    // not send. Colorful, Luminous and Rolling are left out until their
+    // palettes have been tried.
+    SkuMusicProfiles {
+        sku: "H60B2",
+        styles: &[("Bloom", 0x43), ("Rhythm", 0x4b), ("Stippling", 0x83)],
+    },
 ];
 
 /// Look up the internal profile id for a style on a given SKU.
@@ -108,6 +121,8 @@ mod test {
         assert_eq!(music_profile("H607C", "Rhythm"), Some(0x72));
         assert_eq!(music_profile("H6020", "rhythm"), Some(0x38));
         assert_eq!(music_profile("H6020", "Hopping"), None);
+        assert_eq!(music_profile("H60B2", "Rhythm"), Some(0x4b));
+        assert_eq!(music_profile("H60B2", "Hopping"), None);
         assert_eq!(music_profile("H9999", "Rhythm"), None);
     }
 
