@@ -1,4 +1,4 @@
-# Govee to MQTT (Revived): fourth pre-release
+# Govee to MQTT (Revived): fifth pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
@@ -16,6 +16,13 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the fourth pre-release
+
+Only the version numbers changed, from `2026.11.27-b2a4425d` style to
+date and time, such as `2026.11.27.1130`. Home Assistant could not tell which of
+two releases made on the same day was newer, so it showed "Up-to-date" and
+greyed out **Update**. The features are the same as the fourth.
 
 ## New since the third pre-release
 

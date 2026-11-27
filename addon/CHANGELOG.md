@@ -1,5 +1,10 @@
 # Changelog
 
+## Fifth pre-release
+
+- Version numbers are now date and time, so that Home Assistant offers updates
+  made on the same day. Otherwise the same as the fourth
+
 ## Fourth pre-release
 
 - Needs Home Assistant 2025.2 or newer

@@ -15,7 +15,12 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: fourth pre-release
+## Status: fifth pre-release
+
+The fifth changes only how releases are numbered, to `YYYY.MM.DD.HHMM`. Home
+Assistant did not offer the fourth to someone on the third, as both were made on
+the same day and it does not order the commit hash. Check that the fifth is
+offered to the owner.
 
 Prepared on 2026-11-27. The owner ran the third pre-release,
 `2026.11.27-6d5c4d04`: after a Home Assistant restart every light stayed
@@ -48,7 +53,7 @@ block rules for the program, so it says nothing about the lights.
 4. Tag from `main` (Git Bash):
 
    ```sh
-   TAG=$(git -c core.abbrev=8 show -s --format=%cd-%h --date=format:%Y.%m.%d)
+   TAG=$(TZ=UTC0 git show -s --format=%cd --date=format-local:%Y.%m.%d.%H%M)
    git tag "$TAG"
    ./scripts/apply-tag.sh
    git commit -am "Tag $TAG"
