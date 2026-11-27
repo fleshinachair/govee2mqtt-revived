@@ -470,7 +470,6 @@ Left for later:
 - Run the Python test for the 2FA harness in CI.
 - `scripts/cliff.toml` still links `#N` to `wez`, which is right for upstream
   numbers and wrong for this fork's own.
-- `.github/FUNDING.yml` keeps wez's sponsor links on purpose.
 
 ---
 

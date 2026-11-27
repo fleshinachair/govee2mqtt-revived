@@ -227,14 +227,3 @@ Foundations:
   work that the bridge builds on
 * [homebridge-govee](https://github.com/bwp91/homebridge-govee/) by
   [bwp91](https://github.com/bwp91), which made the AWS IoT support possible
-
-## Support the original author
-
-Building and supporting software like this takes significant effort. To say
-thanks to Wez, who wrote the bridge:
-
-* [Sponsor Wez on GitHub](https://github.com/sponsors/wez)
-* [Sponsor Wez on Patreon](https://patreon.com/WezFurlong)
-* [Sponsor Wez on Ko-Fi](https://ko-fi.com/wezfurlong)
-* [Sponsor Wez via Liberapay](https://liberapay.com/wez)
-
