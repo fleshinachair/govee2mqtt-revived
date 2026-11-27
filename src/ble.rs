@@ -473,6 +473,8 @@ pub struct HumidifierAutoMode {
 ///
 /// The table is derived from the reference implementation at
 /// <https://github.com/AlgoClaw/Govee/blob/main/decoded/v1.2/model_specific_parameters.json>
+/// The H607C and H60B0 entries come instead from tests on those lamps
+/// (fleshinachair/govee2mqtt-revived#5).
 struct ScenePrefixRules {
     skus: &'static [&'static str],
     /// The multi-packet line prefix. Almost every model uses 0xa3.
@@ -1230,7 +1232,6 @@ a3 ff 00 01 ff ff 00 00 00 00 00 00 00 00 00 00 00 00 00 5d
         assert_eq!(rules.apply(vec![0x41, 0x99]), vec![0x02, 0x41, 0x99]);
     }
 
-    /// H6022 has two rules; the one matching the actual prefix must win.
     #[test]
     fn scene_prefix_rules_h607c_keep_type_6_parameters_verbatim() {
         let rules = ScenePrefixRules::for_sku("H607C");
@@ -1256,6 +1257,7 @@ a3 ff 00 01 ff ff 00 00 00 00 00 00 00 00 00 00 00 00 00 5d
         assert_eq!(rules.apply(vec![]), vec![0x02]);
     }
 
+    /// H6022 has two rules; the one matching the actual prefix must win.
     #[test]
     fn scene_prefix_rules_h6022() {
         let rules = ScenePrefixRules::for_sku("H6022");
