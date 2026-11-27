@@ -5,11 +5,14 @@ use crate::ble::{
 use crate::lan_api::{
     Client as LanClient, DeviceColor, DeviceStatus as LanDeviceStatus, LanDevice,
 };
-use crate::platform_api::{DeviceCapability, DeviceType, GoveeApiClient, MusicModeSettings};
+use crate::platform_api::{
+    rate_limit_of, DeviceCapability, DeviceType, GoveeApiClient, MusicModeSettings,
+};
 use crate::service::coordinator::Coordinator;
 use crate::service::device::Device;
 use crate::service::hass::{topic_safe_id, HassClient};
 use crate::service::iot::IotClient;
+use crate::service::poll_backoff::PollBackoff;
 use crate::temperature::{TemperatureScale, TemperatureValue};
 use crate::undoc_api::{DeviceEntry, GoveeUndocumentedApi};
 use anyhow::Context;
@@ -53,6 +56,7 @@ pub struct State {
     music_sensitivity_publish_by_id: Mutex<HashMap<String, Arc<Mutex<()>>>>,
     lan_client: Mutex<Option<LanClient>>,
     platform_client: Mutex<Option<GoveeApiClient>>,
+    platform_poll_backoff: Mutex<PollBackoff>,
     undoc_client: Mutex<Option<GoveeUndocumentedApi>>,
     iot_client: Mutex<Option<IotClient>>,
     hass_client: Mutex<Option<HassClient>>,
@@ -392,13 +396,40 @@ impl State {
                 return Ok(false);
             }
 
+            if let Some(wait) = self
+                .platform_poll_backoff
+                .lock()
+                .await
+                .remaining(Instant::now())
+            {
+                log::debug!(
+                    "not polling {device}: Govee reported too many requests,                      waiting {}s more",
+                    wait.as_secs()
+                );
+                return Ok(false);
+            }
+
             let device_state = device.device_state();
             log::info!("requesting update via Platform API {device} {device_state:?}");
             if let Some(info) = &device.http_device_info {
-                let http_state = client
-                    .get_device_state(info)
-                    .await
-                    .context("get_device_state")?;
+                let result = client.get_device_state(info).await;
+                {
+                    let mut backoff = self.platform_poll_backoff.lock().await;
+                    match &result {
+                        Ok(_) => backoff.succeeded(),
+                        Err(err) => {
+                            if let Some(pause) = rate_limit_of(err).and_then(|retry_after| {
+                                backoff.rate_limited(Instant::now(), retry_after)
+                            }) {
+                                log::warn!(
+                                    "Govee says there were too many requests.                                      Status polling pauses for {} seconds",
+                                    pause.as_secs()
+                                );
+                            }
+                        }
+                    }
+                }
+                let http_state = result.context("get_device_state")?;
                 log::trace!("updated state for {device}");
 
                 {

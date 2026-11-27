@@ -249,9 +249,25 @@ impl GoveeApiClient {
             },
         };
 
-        let resp: ControlDeviceResponse = self
-            .request_with_json_response(Method::POST, url, &request)
-            .await?;
+        let mut result: anyhow::Result<ControlDeviceResponse> = self
+            .request_with_json_response(Method::POST, url.clone(), &request)
+            .await;
+
+        // A refused command was not carried out, so it is safe to send again
+        if let Some(delay) = result
+            .as_ref()
+            .err()
+            .and_then(rate_limit_of)
+            .and_then(command_retry_delay)
+        {
+            log::warn!("Govee says there were too many requests; retrying in {delay:?}");
+            tokio::time::sleep(delay).await;
+            result = self
+                .request_with_json_response(Method::POST, url, &request)
+                .await;
+        }
+
+        let resp = result?;
 
         log::info!("control_device result: {resp:?}");
 
@@ -842,7 +858,10 @@ pub struct HttpDeviceInfo {
 
 /// Parse each item of a list on its own, so that one malformed item from Govee
 /// cannot take down all the others. Returns the items and how many were skipped.
-fn parse_each<'de, D, T>(deserializer: D, what: &str) -> Result<(Vec<T>, usize), D::Error>
+pub(crate) fn parse_each<'de, D, T>(
+    deserializer: D,
+    what: &str,
+) -> Result<(Vec<T>, usize), D::Error>
 where
     D: serde::Deserializer<'de>,
     T: serde::de::DeserializeOwned,
@@ -1330,6 +1349,44 @@ fn http_status_failure_with_policy(
     }
 }
 
+/// Govee refused a request with status 429 because too many were made.
+#[derive(Error, Debug)]
+#[error("{message}")]
+pub struct GoveeRateLimited {
+    message: String,
+    /// How long Govee asked us to wait, if it said
+    pub retry_after: Option<Duration>,
+}
+
+/// If `err` says that too many requests were made, returns how long Govee
+/// asked us to wait, which it may not have said.
+pub fn rate_limit_of(err: &anyhow::Error) -> Option<Option<Duration>> {
+    if let Some(limited) = err.downcast_ref::<GoveeRateLimited>() {
+        return Some(limited.retry_after);
+    }
+    // The same status can arrive inside the body of a successful response
+    HttpRequestFailed::from_err(err)
+        .filter(|failed| failed.status == reqwest::StatusCode::TOO_MANY_REQUESTS)
+        .map(|_| None)
+}
+
+/// The longest that a user's command is held back to be sent again
+const LONGEST_COMMAND_RETRY: Duration = Duration::from_secs(5);
+
+/// How long to wait before sending a refused command again, or `None` if the
+/// wait that Govee asks for is too long to be useful.
+fn command_retry_delay(retry_after: Option<Duration>) -> Option<Duration> {
+    let delay = retry_after
+        .unwrap_or(Duration::from_secs(1))
+        .max(Duration::from_secs(1));
+    (delay <= LONGEST_COMMAND_RETRY).then_some(delay)
+}
+
+fn retry_after_header(headers: &reqwest::header::HeaderMap) -> Option<Duration> {
+    let value = headers.get(reqwest::header::RETRY_AFTER)?.to_str().ok()?;
+    value.trim().parse().ok().map(Duration::from_secs)
+}
+
 /// Govee answered with a 5xx status: the service is down, not the request
 /// wrong. See [`crate::undoc_api::is_govee_unreachable`].
 #[derive(Error, Debug)]
@@ -1402,6 +1459,7 @@ pub async fn http_response_body<R: serde::de::DeserializeOwned>(
 
     let status = response.status();
     if !status.is_success() {
+        let retry_after = retry_after_header(response.headers());
         let body_bytes = response.bytes().await.with_context(|| {
             format!(
                 "request {diagnostic_url} status {}: {}, and failed to read response body",
@@ -1410,12 +1468,16 @@ pub async fn http_response_body<R: serde::de::DeserializeOwned>(
             )
         })?;
 
-        return Err(http_status_failure_with_policy(
-            &url,
-            status,
-            &body_bytes,
-            should_log_sensitive_data(),
-        ));
+        let err =
+            http_status_failure_with_policy(&url, status, &body_bytes, should_log_sensitive_data());
+        if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            return Err(GoveeRateLimited {
+                message: format!("{err:#}"),
+                retry_after,
+            }
+            .into());
+        }
+        return Err(err);
     }
     json_body(response).await.with_context(|| {
         format!(
@@ -1518,6 +1580,44 @@ pub(crate) mod test {
     fn list_devices() {
         let resp: GetDevicesResponse = from_json(&LIST_DEVICES_EXAMPLE).unwrap();
         k9::assert_matches_snapshot!(format!("{resp:#?}"));
+    }
+
+    #[test]
+    fn too_many_requests_is_recognized() {
+        let limited: anyhow::Error = GoveeRateLimited {
+            message: "request status 429".to_string(),
+            retry_after: Some(Duration::from_secs(30)),
+        }
+        .into();
+        assert_eq!(
+            rate_limit_of(&limited.context("get_device_state")),
+            Some(Some(Duration::from_secs(30)))
+        );
+
+        let url = reqwest::Url::parse("https://example.invalid/state").unwrap();
+        let embedded = parse_json_body_with_policy::<NumericResponse>(
+            &url,
+            br#"{"status":429,"message":"slow down"}"#,
+            false,
+        )
+        .expect_err("a 429 in the body is a failure");
+        assert_eq!(rate_limit_of(&embedded), Some(None));
+
+        assert_eq!(rate_limit_of(&anyhow::anyhow!("something else")), None);
+    }
+
+    #[test]
+    fn a_command_is_only_resent_after_a_short_wait() {
+        assert_eq!(command_retry_delay(None), Some(Duration::from_secs(1)));
+        assert_eq!(
+            command_retry_delay(Some(Duration::ZERO)),
+            Some(Duration::from_secs(1))
+        );
+        assert_eq!(
+            command_retry_delay(Some(Duration::from_secs(5))),
+            Some(Duration::from_secs(5))
+        );
+        assert_eq!(command_retry_delay(Some(Duration::from_secs(60))), None);
     }
 
     #[test]
