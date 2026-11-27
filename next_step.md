@@ -15,7 +15,16 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: eleventh pre-release
+## Status: twelfth pre-release
+
+fleshinachair/govee2mqtt-revived#5 from Paulo Silveira: scene framing for the
+H607C and H60B0, found by sending hand-built frames to their lamps. The owner is
+to check effects on their H607C with this build. The H6020 uses another layout
+and is untried. Paulo also confirmed fleshinachair/govee2mqtt-revived#1 on a real
+two-step verification account; a first sign-in from an empty cache and token
+expiry remain untested.
+
+## Earlier status: eleventh pre-release
 
 The web page reads Home Assistant's theme through ingress. Checked in a headless
 browser against a stand-in parent page; the owner is to check it in their Home
@@ -31,10 +40,8 @@ mock data, not inside Home Assistant.
 The first outside contribution: fleshinachair/govee2mqtt-revived#1 to #4, from
 Paulo Silveira, who offers to test on a real two-step verification account.
 
-Open: the owner reports that an effect chosen on their H607C does not match what
-the lamp shows. The names and scene codes come from one Govee list, and 89 of its
-104 entries are `sceneType` 6 with parameters starting `0a`. Whether this model
-needs different framing from the generic `02` prefix is untested.
+The owner then reported that an effect chosen on their H607C did not match what
+the lamp showed. The twelfth pre-release addresses this.
 
 ## Earlier status: eighth pre-release
 

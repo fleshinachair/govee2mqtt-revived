@@ -1,5 +1,12 @@
 # Changelog
 
+## Twelfth pre-release
+
+- H607C and H60B0: fixed effects playing something other than the one chosen,
+  when no Govee API key is set (by Paulo Silveira)
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Eleventh pre-release
 
 - The web page matches your Home Assistant theme

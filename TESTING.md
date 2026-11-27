@@ -1,7 +1,7 @@
 # Testing the pre-release
 
-Thank you for trying it. This fork has not confirmed any change on real Govee
-hardware, so your report is the first real test. "It works" is useful too.
+Thank you for trying it. Very little in this fork has been confirmed on real
+Govee hardware, so your report counts. "It works" is useful too.
 
 ## Before you start
 
@@ -66,6 +66,13 @@ New in the fourth pre-release:
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 
+New in the twelfth pre-release. These need a setup **without** a Govee API key:
+
+| You have | Try | Tell us |
+|---|---|---|
+| H607C or H60B0 | Choose several effects, then the same names in the Govee app | Which you chose, and whether the two look the same |
+| H6020 | The same | Whether they differ; it may still be wrong |
+
 New in the eleventh pre-release:
 
 | You have | Try | Tell us |
@@ -84,7 +91,6 @@ New in the ninth pre-release:
 |---|---|---|
 | A Govee account with 2FA | Press **Purge Caches**, then restart the add-on | Whether it starts without asking for a code |
 | H6020, H607C, H60B0, H60B2, H7025 or H8057 | Set the warmest and coolest white | Whether it stays lit, and whether the range looks right |
-| H607C | Choose several effects and compare with the Govee app | Which one you chose, and what the light showed |
 
 New in the eighth pre-release:
 

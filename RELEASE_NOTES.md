@@ -1,11 +1,12 @@
-# Govee to MQTT (Revived): eleventh pre-release
+# Govee to MQTT (Revived): twelfth pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
 **This is a build for testers.** It passes its automated tests, but very little
 has been tried for real: earlier pre-releases ran on one setup with three lights
-on the LAN. Nothing has run against a Govee account, and nothing new in this
-build has been tried on a real device. Take a Home Assistant backup first. Moving from wez's add-on: see
+on the LAN, and one contributor has since signed in to a real Govee account with
+two-step verification. This build itself has not been tried on a real device.
+Take a Home Assistant backup first. Moving from wez's add-on: see
 [the migration steps](README.md#migrating-from-wezgovee2mqtt-zero-entity-loss).
 What to try, and how to report it: [TESTING.md](TESTING.md).
 
@@ -16,6 +17,29 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the eleventh pre-release
+
+Both fixes are by [Paulo Silveira](https://github.com/peas), who found the cause
+on their own lamps
+([#5](https://github.com/fleshinachair/govee2mqtt-revived/pull/5)). They matter
+if you have **no Govee API key**: effects are then sent over your network. With
+a key they go through Govee's cloud, which was not affected.
+
+* **H607C: an effect played something other than the one chosen.** For example,
+  "Fire" showed blue with a white band. Sent the new way, "Fire" and "Forest"
+  looked right.
+* **H60B0: the same fault.** Sent the new way, "Ocean" looked like Govee's
+  cloud version. Only that scene was compared.
+
+The new data was tried on the lamps with a script that builds the same bytes,
+not with this build. Choose the effect again after updating. The H6020 lays out
+its effects differently again and may have a similar fault; it has not been
+tried.
+
+Also: Paulo confirmed on a two-step verification account that upgrading from
+govee2mqtt-extended and pressing **Purge Caches** did not ask for a new code
+(tried on the ninth pre-release).
 
 ## New since the tenth pre-release
 
@@ -40,8 +64,7 @@ these lights every day.
 
 * **Purge Caches no longer signs you out of Govee.** With two-step verification,
   pressing it could leave the bridge unable to start until you entered a new
-  code. If you change the account email, the bridge signs in again by itself.
-  Not yet tried on a real account with this build
+  code. If you change the account email, the bridge signs in again by itself
   ([#1](https://github.com/fleshinachair/govee2mqtt-revived/issues/1),
   [#2](https://github.com/fleshinachair/govee2mqtt-revived/pull/2)).
 * **Settings for more lights:** H6020, H607C, H60B2, H7025 and H8057 are added,
@@ -55,9 +78,6 @@ these lights every day.
 * **[Field notes](docs/FIELD_NOTES.md)** from the same contributor, for anyone
   working on the bridge
   ([#4](https://github.com/fleshinachair/govee2mqtt-revived/pull/4)).
-
-**Known problem:** on an H607C, choosing an effect may show something other than
-the one chosen. This is being looked into.
 
 ## New since the seventh pre-release
 
@@ -265,9 +285,10 @@ wez#424, wez#200).
 * The Status sensor can now read **Offline**.
 * If the MQTT broker is unreachable for **5 minutes**, the bridge exits so that
   it can be restarted.
-* Scene data is now encoded differently for H6022, H6065, H6066, H6052, H6092,
-  H610A, H6079 and H70C4. Only the H6022 is reported as hardware tested. If
-  scenes stopped working on one of these, please report it.
+* Scene data is now encoded differently for H6022, H607C, H60B0, H6065, H6066,
+  H6052, H6092, H610A, H6079 and H70C4. Only the H6022, H607C and H60B0 changes
+  are reported as tried on hardware. If scenes stopped working on one of these,
+  please report it.
 
 ## Not yet confirmed
 

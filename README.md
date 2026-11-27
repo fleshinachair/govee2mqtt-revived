@@ -188,9 +188,11 @@ Contributions to this fork:
 * [Paulo Silveira](https://github.com/peas): keeping the sign-in across Purge
   Caches ([#2](https://github.com/fleshinachair/govee2mqtt-revived/pull/2)),
   settings for six lights
-  ([#3](https://github.com/fleshinachair/govee2mqtt-revived/pull/3)) and
+  ([#3](https://github.com/fleshinachair/govee2mqtt-revived/pull/3)),
   [field notes](docs/FIELD_NOTES.md)
-  ([#4](https://github.com/fleshinachair/govee2mqtt-revived/pull/4))
+  ([#4](https://github.com/fleshinachair/govee2mqtt-revived/pull/4)) and
+  correct effects on the H607C and H60B0
+  ([#5](https://github.com/fleshinachair/govee2mqtt-revived/pull/5))
 
 Authors of open upstream pull requests applied here:
 

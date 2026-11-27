@@ -56,6 +56,22 @@ byte-level write-up is at
 - LAN and Platform music sensitivity are separate slots on the device.
   Setting one does not change the other.
 
+## Scenes over the LAN
+
+From pull request
+[#5](https://github.com/fleshinachair/govee2mqtt-revived/pull/5), whose H607C
+and H60B0 rules are in `src/ble.rs`.
+
+- How a scene's parameters must be framed depends on the model. A lamp can play
+  a different animation, or ignore the upload, without any error.
+- The H607C wants parameters starting `0a` sent as they are. Its scenes with no
+  parameters work with the generic `02`.
+- The H60B0 wraps them as `51`, a two-byte length, an `0a` block, then a second
+  length-prefixed block. Dropping the first three bytes matched the cloud by eye
+  on one scene. What the second block does is not known.
+- Not tried: the H6020 library is `sceneType` 5, starting `50`. H60B2, H7025,
+  H61E5 and H8057 are type 2, and H6009 type 1.
+
 ## Devices
 
 - A device added to the Govee account while the bridge was running (H61E5,
