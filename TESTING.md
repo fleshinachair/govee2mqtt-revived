@@ -42,7 +42,7 @@ hardware, so your report is the first real test. "It works" is useful too.
 
 ## Newer changes
 
-These are new in the second pre-release. The first one,
+These are new since the first pre-release. The first one,
 `2026.11.26-dd7edbbb`, does not have them.
 
 | You have | Try | Tell us |

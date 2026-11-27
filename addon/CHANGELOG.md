@@ -1,5 +1,10 @@
 # Changelog
 
+## Third pre-release
+
+- Short light transitions (under 2 seconds) apply at once instead of delaying
+  the change by a second
+
 ## Second pre-release
 
 - Fix crashes when the cache cannot be opened or Govee sends a malformed device

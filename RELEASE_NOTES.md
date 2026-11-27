@@ -1,10 +1,11 @@
-# Govee to MQTT (Revived): second pre-release
+# Govee to MQTT (Revived): third pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
-**This is a build for testers.** It passes its automated tests, but this fork has
-not confirmed any change against a real Govee account or device. Take a Home
-Assistant backup first. Moving from wez's add-on: see
+**This is a build for testers.** It passes its automated tests, but very little
+has been tried for real: so far only the second pre-release, which found three
+lights on the LAN and switched them on and off. Nothing has run against a Govee
+account. Take a Home Assistant backup first. Moving from wez's add-on: see
 [the migration steps](README.md#migrating-from-wezgovee2mqtt-zero-entity-loss).
 What to try, and how to report it: [TESTING.md](TESTING.md).
 
@@ -13,6 +14,16 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the second pre-release
+
+A `transition` shorter than 2 seconds sent with a brightness delayed the change
+by a second, and a light that was off came on dim first. Home Assistant can send
+such values with an ordinary turn-on. They now apply at once. Found by reading
+the code.
+
+The README now states that Claude, Anthropic's AI model, primarily maintains
+this repository.
 
 ## New since the first pre-release
 
