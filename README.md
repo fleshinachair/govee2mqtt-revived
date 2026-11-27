@@ -183,6 +183,15 @@ Building on:
   modes and much more were developed. They were brought over commit by commit,
   keeping their authors.
 
+Contributions to this fork:
+
+* [Paulo Silveira](https://github.com/peas): keeping the sign-in across Purge
+  Caches ([#2](https://github.com/fleshinachair/govee2mqtt-revived/pull/2)),
+  settings for six lights
+  ([#3](https://github.com/fleshinachair/govee2mqtt-revived/pull/3)) and
+  [field notes](docs/FIELD_NOTES.md)
+  ([#4](https://github.com/fleshinachair/govee2mqtt-revived/pull/4))
+
 Authors of open upstream pull requests applied here:
 
 * [UPEngineer](https://github.com/UPEngineer): Tap-to-Run shortcuts
