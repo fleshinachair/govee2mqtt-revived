@@ -69,10 +69,12 @@ and H60B0 rules are in `src/ble.rs`.
 - The H60B0 wraps them as `51`, a two-byte length, an `0a` block, then a second
   length-prefixed block. Dropping the first three bytes matched the cloud by eye
   on one scene. What the second block does is not known.
-- On three `sceneType` 2 models the generic `02` looks right: sending the same
+- On four `sceneType` 2 models the generic `02` looks right: sending the same
   scene through the cloud afterwards made no visible change (H61E5 "Forest" and
-  "Fire", H60B2 "Forest", H8057 "Ocean"; judged by eye). The H7025 is the same
-  type but was not tried.
+  "Fire", H60B2 "Forest", H8057 "Ocean", H7025 "Christmas"; judged by eye).
+- Some libraries give one name two `lightEffects`, which the Platform API lists
+  as two scenes (H7025 "Christmas-A" and "Christmas-B"). Choosing by name over
+  the LAN gives the first.
 - Not tried: the H6020 (`sceneType` 5, starting `50`) and the H6009 (type 1).
 
 ## Devices
