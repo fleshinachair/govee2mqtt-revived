@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Needs Home Assistant 2025.2 or newer
+- Entities come back after a Home Assistant restart when Home Assistant
+  announces itself on `hass/status`
 - Light colour temperature limits are exact: 9000 K no longer shows as 9009 K
 - 35 more light models, 12 of them limited to 2700-6500 K
 - "Report a problem" on the web page

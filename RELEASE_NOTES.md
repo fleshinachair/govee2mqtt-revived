@@ -17,6 +17,10 @@ References such as `wez#739` are issues and pull requests in
 
 ## Not released yet
 
+* Entities now come back after a Home Assistant restart on setups that announce
+  themselves on `hass/status` and not `homeassistant/status`. Before, the
+  bridge never heard the restart and everything stayed `unavailable` until the
+  add-on was restarted too.
 * Light colour temperature is exchanged with Home Assistant in Kelvin, so limits
   are exact (wez#731). **Needs Home Assistant 2025.2 or newer.**
 * 35 light models seen on the LAN in upstream reports are now in the model

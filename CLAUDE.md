@@ -187,6 +187,9 @@ first discovery exits the process (upstream #76). Cloud discovery repeats every 
   dispatches commands and rebuilds subscriptions after reconnect.
 - `rebuild_router` registers command topics under `gv2mqtt/`, plus the HA status
   topic `<discovery_prefix>/status`. Only `online` there re-registers entities.
+  It also listens on `hass/status`, where some HA setups announce themselves.
+  Discovery configs are not retained, so a missed `online` leaves every entity
+  `unavailable`.
 - Availability is not retained, so it is re-published every 60 s.
 - With `GOVEE_OFFLINE_UNAVAILABLE=true`, device entities also depend on a
   retained `gv2mqtt/<id>/availability`.

@@ -52,7 +52,15 @@ After purging:
 
 ## My devices appear greyed out / unavailable in Home Assistant
 
-This usually means Home Assistant had trouble registering the device entity
+If this happens after Home Assistant restarts, and restarting the add-on clears
+it, the bridge is probably not hearing Home Assistant come back. In the MQTT
+integration's options, the birth message topic should be `homeassistant/status`
+(or your discovery prefix followed by `/status`), with the payload `online`.
+`hass/status` is also accepted, from the release after the third pre-release.
+When the bridge hears it, the add-on log says
+`Home Assistant status changed: online`.
+
+Otherwise this usually means Home Assistant had trouble registering the device entity
 via MQTT. To troubleshoot:
 
 1. Check the **Home Assistant logs** for entries mentioning `gv2mqtt` or

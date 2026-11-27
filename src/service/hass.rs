@@ -37,6 +37,18 @@ const MUSIC_PALETTE_ENV_VAR: &str = "GOVEE_MUSIC_PALETTE";
 /// Resolved at registration time with the configured discovery prefix.
 const HASS_STATUS_ROUTE_PATTERN: &str = "{hass_disco_prefix}/status";
 
+/// Some setups, often older ones, have hass announce itself here instead.
+/// hass keeps that setting across upgrades, and if we don't hear it restart,
+/// every entity stays `unavailable` until we are restarted too.
+const HASS_ALT_STATUS_TOPIC: &str = "hass/status";
+
+/// Whether `path`, resolved from `pattern`, is already covered by the status
+/// route: with a discovery prefix of "hass" both are the same topic.
+fn is_repeated_status_route(pattern: &str, disco_prefix: &str) -> bool {
+    pattern == HASS_ALT_STATUS_TOPIC
+        && resolve_mqtt_route_pattern(HASS_STATUS_ROUTE_PATTERN, disco_prefix) == pattern
+}
+
 /// Resolve a table pattern to the topic template passed to `MqttRouter::route`.
 fn resolve_mqtt_route_pattern(pattern: &str, disco_prefix: &str) -> String {
     if pattern == HASS_STATUS_ROUTE_PATTERN {
@@ -55,6 +67,7 @@ macro_rules! mqtt_routes {
     ($m:ident) => {
         $m! {
             HASS_STATUS_ROUTE_PATTERN => mqtt_homeassitant_status,
+            HASS_ALT_STATUS_TOPIC => mqtt_homeassitant_status,
             LIGHT_COMMAND_ROUTE => mqtt_light_command,
             LIGHT_SEGMENT_COMMAND_ROUTE => mqtt_light_segment_command,
             SWITCH_COMMAND_ROUTE => mqtt_switch_command,
@@ -134,12 +147,14 @@ async fn bind_mqtt_command_routes(
     macro_rules! register_mqtt_routes {
         ($($pattern:expr => $handler:path),+ $(,)?) => {
             $(
-                bind_one_mqtt_route(
-                    bind,
-                    resolve_mqtt_route_pattern($pattern, disco_prefix),
-                    $handler,
-                )
-                .await?;
+                if !is_repeated_status_route($pattern, disco_prefix) {
+                    bind_one_mqtt_route(
+                        bind,
+                        resolve_mqtt_route_pattern($pattern, disco_prefix),
+                        $handler,
+                    )
+                    .await?;
+                }
             )+
         };
     }
@@ -1572,6 +1587,7 @@ mod tests {
     fn mqtt_route_handlers_match_their_patterns() {
         const EXPECTED: &[(&str, &str)] = &[
             ("{hass_disco_prefix}/status", "mqtt_homeassitant_status"),
+            ("hass/status", "mqtt_homeassitant_status"),
             ("gv2mqtt/light/:id/command", "mqtt_light_command"),
             (
                 "gv2mqtt/light/:id/command/:segment",
@@ -1647,13 +1663,27 @@ mod tests {
             .await
             .expect("recording route bindings cannot fail");
 
-        let mut expected = vec!["homeassistant/status".to_string()];
+        let mut expected = vec![
+            "homeassistant/status".to_string(),
+            "hass/status".to_string(),
+        ];
         expected.extend(
             crate::hass_mqtt::command_routes::REGISTERED_COMMAND_ROUTES
                 .iter()
                 .map(|route| (*route).to_string()),
         );
         assert_eq!(recorded, expected);
+    }
+
+    #[tokio::test]
+    async fn the_status_topic_is_registered_once_when_the_prefix_is_hass() {
+        let mut recorded = Vec::new();
+        bind_mqtt_command_routes(&mut MqttRouteBind::Record(&mut recorded), "hass")
+            .await
+            .expect("recording route bindings cannot fail");
+
+        let count = recorded.iter().filter(|r| *r == "hass/status").count();
+        assert_eq!(count, 1, "{recorded:?}");
     }
 
     #[test]
