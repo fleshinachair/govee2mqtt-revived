@@ -189,6 +189,18 @@ is on, setting the target temperature from Home Assistant asks for Auto Stop
 too. Flipping the switch sends nothing by itself, and it does not show what the
 Govee app is set to, as Govee does not report that.
 
+## Sensor reading interval
+
+Thermometers, air quality monitors and other sensors are read from Govee every
+15 minutes by default.
+
+|ENV|App Config|Default|Purpose|
+|---|----------|-------|-------|
+|`GOVEE_SENSOR_POLL_INTERVAL=300`|`sensor_poll_interval`|`900`|Seconds between reads, from 60 to 900|
+
+Each read of each sensor counts against Govee's daily request limit. Reading
+more often cannot give newer values than the sensor has uploaded to Govee.
+
 ## Effects (Scenes)
 
 By default Govee2MQTT publishes each light's full list of scene "effects" to

@@ -140,6 +140,11 @@ if bashio::config.has_value no_iot_control ; then
   export GOVEE_NO_IOT_CONTROL
 fi
 
+if bashio::config.has_value sensor_poll_interval ; then
+  GOVEE_SENSOR_POLL_INTERVAL="$(bashio::config sensor_poll_interval)"
+  export GOVEE_SENSOR_POLL_INTERVAL
+fi
+
 if bashio::config.has_value http_addr ; then
   HTTP_ADDR="$(bashio::config http_addr)"
   export HTTP_ADDR

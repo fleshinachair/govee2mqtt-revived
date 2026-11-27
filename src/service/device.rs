@@ -32,6 +32,26 @@ fn is_listed_device(list: &str, sku: &str, id: &str) -> bool {
         })
 }
 
+/// Seconds between Platform API reads of thermometers and other sensors
+const SENSOR_POLL_INTERVAL_ENV_VAR: &str = "GOVEE_SENSOR_POLL_INTERVAL";
+
+/// No faster than once a minute, as each read counts against Govee's request
+/// limit, and no slower than the usual interval, which is also when the
+/// Status sensor starts to say "Missing".
+fn sensor_poll_interval(setting: Option<&str>) -> chrono::Duration {
+    let usual = *POLL_INTERVAL;
+    let Some(setting) = setting.map(str::trim).filter(|s| !s.is_empty()) else {
+        return usual;
+    };
+    match setting.parse::<i64>() {
+        Ok(seconds) => chrono::Duration::seconds(seconds.clamp(60, usual.num_seconds())),
+        Err(err) => {
+            log::warn!("ignoring {SENSOR_POLL_INTERVAL_ENV_VAR}={setting:?}: {err}");
+            usual
+        }
+    }
+}
+
 #[derive(Default, Clone, Debug)]
 pub struct Device {
     pub sku: String,
@@ -366,6 +386,9 @@ impl Device {
                 } else {
                     *POLL_INTERVAL
                 }
+            }
+            DeviceType::Thermometer | DeviceType::Sensor | DeviceType::AirQualityMonitor => {
+                sensor_poll_interval(std::env::var(SENSOR_POLL_INTERVAL_ENV_VAR).ok().as_deref())
             }
             _ => *POLL_INTERVAL,
         }
@@ -1001,6 +1024,20 @@ impl Device {
 
 #[cfg(test)]
 mod test {
+    /// wez/govee2mqtt#672
+    #[test]
+    fn sensor_poll_interval_is_bounded() {
+        let seconds = |setting| sensor_poll_interval(setting).num_seconds();
+        assert_eq!(seconds(None), 900);
+        assert_eq!(seconds(Some("")), 900);
+        assert_eq!(seconds(Some("often")), 900);
+        assert_eq!(seconds(Some("120")), 120);
+        assert_eq!(seconds(Some(" 300 ")), 300);
+        assert_eq!(seconds(Some("5")), 60);
+        assert_eq!(seconds(Some("-1")), 60);
+        assert_eq!(seconds(Some("86400")), 900);
+    }
+
     #[test]
     fn devices_can_be_listed_by_model_or_id() {
         let listed = |list| is_listed_device(list, "H6159", "AA:BB:CC:DD:EE:FF:11:22");

@@ -27,6 +27,12 @@ configuration:
       Models (such as H6159) or device IDs, separated by commas, to control
       without AWS IoT. Try it if a light without LAN control shows commands as
       sent but does not react. Needs the API key.
+  sensor_poll_interval:
+    name: Sensor Reading Interval (s)
+    description: >-
+      How often thermometers and other sensors are read from Govee, from 60 to
+      900 seconds (default 900). Shorter intervals use more of Govee's daily
+      request limit.
   govee_email:
     name: Govee Account Email
     description: >-
