@@ -66,6 +66,12 @@ New in the fourth pre-release:
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 
+New in the eighth pre-release:
+
+| You have | Try | Tell us |
+|---|---|---|
+| A light on the LAN | Switch it off at the wall, restart the add-on, wait a minute, restart Home Assistant, then switch the light back on | Whether it becomes available within a couple of minutes |
+
 New in the seventh pre-release:
 
 | You have | Try | Tell us |

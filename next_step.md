@@ -15,7 +15,12 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: seventh pre-release
+## Status: eighth pre-release
+
+Adds devices found after startup to Home Assistant. The owner saw a light left
+unavailable on the seventh, which otherwise worked, and is to check the fix.
+
+## Earlier status: seventh pre-release
 
 Adds the web page inside Home Assistant (ingress) and a list of devices to
 ignore. The owner is to check both; ingress has never run on a real Home

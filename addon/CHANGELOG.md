@@ -1,5 +1,12 @@
 # Changelog
 
+## Eighth pre-release
+
+- A light that is slow to answer at startup is now added to Home Assistant when
+  it is found, instead of staying unavailable
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Seventh pre-release
 
 - Open web UI shows the web page inside Home Assistant, with an optional
