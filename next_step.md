@@ -15,7 +15,13 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: sixth pre-release
+## Status: seventh pre-release
+
+Adds the web page inside Home Assistant (ingress) and a list of devices to
+ignore. The owner is to check both; ingress has never run on a real Home
+Assistant.
+
+## Earlier status: sixth pre-release
 
 Every open upstream issue is sorted in `docs/STATUS.md`. The sixth carries all
 the work that could be done without the device; none of it is confirmed on

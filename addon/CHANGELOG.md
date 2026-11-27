@@ -1,5 +1,13 @@
 # Changelog
 
+## Seventh pre-release
+
+- Open web UI shows the web page inside Home Assistant, with an optional
+  sidebar entry. Not yet tried on a real Home Assistant; port 8056 still works
+- New setting ignore_devices, so that deleted devices stay deleted
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Sixth pre-release
 
 None of this has been tried on the hardware it is for.

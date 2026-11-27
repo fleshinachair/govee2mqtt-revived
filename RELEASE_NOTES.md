@@ -1,4 +1,4 @@
-# Govee to MQTT (Revived): sixth pre-release
+# Govee to MQTT (Revived): seventh pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
@@ -16,6 +16,19 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the sixth pre-release
+
+* **The web page opens inside Home Assistant.** **Open web UI** now shows it
+  behind your Home Assistant sign-in, whatever `http_port` is set to, with an
+  optional **Govee** sidebar entry. The page on port 8056 is still there; set
+  `http_addr` to `127.0.0.1` to close it to your network (wez#306). **This has
+  not been tried on a real Home Assistant.** If it shows a blank page or
+  "forbidden", use port 8056 and please report it.
+* **Ignore devices:** the new `ignore_devices` setting takes device IDs, models
+  or names to leave out of Home Assistant, such as groups you no longer have.
+  After a restart, delete them under the MQTT integration and they stay
+  deleted (wez#333, wez#436, wez#721).
 
 ## New since the fifth pre-release
 

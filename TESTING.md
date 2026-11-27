@@ -66,6 +66,14 @@ New in the fourth pre-release:
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 
+New in the seventh pre-release:
+
+| You have | Try | Tell us |
+|---|---|---|
+| The add-on | Choose **Open web UI** | Whether your devices are listed and can be switched |
+| The add-on | In that page, choose **Report a problem** and download the report | Whether the file downloads |
+| A device or group to hide | Add it to `ignore_devices`, restart, delete it under the MQTT integration | Whether it stays gone after another restart |
+
 New in the sixth pre-release:
 
 | You have | Try | Tell us |
