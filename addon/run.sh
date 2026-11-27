@@ -170,6 +170,12 @@ if bashio::config.has_value http_port ; then
   export HTTP_PORT
 fi
 
+# The port that Home Assistant's "Open web UI" button talks to
+ingress_port="$(bashio::addon.ingress_port || true)"
+if [[ "${ingress_port}" =~ ^[1-9][0-9]*$ ]]; then
+  export GOVEE_INGRESS_PORT="${ingress_port}"
+fi
+
 env | grep GOVEE_ | sed -r 's/_(EMAIL|KEY|PASSWORD|2FA_CODE)=.*/_\1=REDACTED/'
 set -x
 

@@ -14,13 +14,17 @@ use crate::service::device::{Device, DeviceState};
 use crate::service::diagnostics;
 use crate::service::state::StateHandle;
 use anyhow::Context;
+use axum::extract::{ConnectInfo, Request};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
+use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use serde::Serialize;
+use std::net::Ipv4Addr;
 use std::net::{IpAddr, SocketAddr};
+use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
 
 fn response_with_code<T: ToString + std::fmt::Display>(code: StatusCode, err: T) -> Response {
@@ -277,7 +281,7 @@ async fn diagnostics_report(State(state): State<StateHandle>) -> Response {
 }
 
 async fn redirect_to_index() -> Response {
-    axum::response::Redirect::to("/assets/index.html").into_response()
+    axum::response::Redirect::to("assets/index.html").into_response()
 }
 
 fn build_router(state: StateHandle) -> Router {
@@ -320,10 +324,54 @@ fn test_build_router() {
     let _ = build_router(StateHandle::default());
 }
 
+/// Home Assistant's Supervisor makes every ingress request from this address
+const SUPERVISOR_ADDR: IpAddr = IpAddr::V4(Ipv4Addr::new(172, 30, 32, 2));
+
+fn is_supervisor(addr: IpAddr) -> bool {
+    addr.to_canonical() == SUPERVISOR_ADDR
+}
+
+async fn only_supervisor(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if is_supervisor(peer.ip()) {
+        next.run(request).await
+    } else {
+        log::warn!(
+            "refused a request on the ingress port from {ip}",
+            ip = peer.ip()
+        );
+        StatusCode::FORBIDDEN.into_response()
+    }
+}
+
+/// Serves the web page to Home Assistant's ingress, which has already checked
+/// who is asking. Anyone else is turned away, as the port is open to the
+/// network when the add-on uses host networking.
+async fn serve_ingress(state: StateHandle, listener: TcpListener) -> anyhow::Result<()> {
+    let app = build_router(state).layer(middleware::from_fn(only_supervisor));
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .context("ingress server stopped")
+}
+
+pub async fn run_ingress_server(state: StateHandle, port: u16) -> anyhow::Result<()> {
+    let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, port))
+        .await
+        .with_context(|| format!("run_ingress_server: binding to port {port}"))?;
+    log::info!("ingress server is on port {port}");
+    serve_ingress(state, listener).await
+}
+
 pub async fn run_http_server(state: StateHandle, addr: IpAddr, port: u16) -> anyhow::Result<()> {
     let app = build_router(state);
     let sa = SocketAddr::new(addr, port);
-    let listener = tokio::net::TcpListener::bind(sa)
+    let listener = TcpListener::bind(sa)
         .await
         .with_context(|| format!("run_http_server: binding to port {port}"))?;
     let addr = listener.local_addr()?;
@@ -333,4 +381,61 @@ pub async fn run_http_server(state: StateHandle, addr: IpAddr, port: u16) -> any
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod ingress_test {
+    use super::*;
+
+    #[test]
+    fn only_the_supervisor_may_use_the_ingress_port() {
+        let ok = |addr: &str| is_supervisor(addr.parse().unwrap());
+        assert!(ok("172.30.32.2"));
+        assert!(ok("::ffff:172.30.32.2"));
+        assert!(!ok("172.30.32.1"));
+        assert!(!ok("192.168.1.59"));
+        assert!(!ok("127.0.0.1"));
+        assert!(!ok("::1"));
+    }
+
+    #[tokio::test]
+    async fn others_are_refused_on_the_ingress_port() -> anyhow::Result<()> {
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await?;
+        let base = format!("http://{}", listener.local_addr()?);
+        let state = std::sync::Arc::new(crate::service::state::State::new());
+        tokio::spawn(serve_ingress(state, listener));
+
+        for path in [
+            "/",
+            "/api/devices",
+            "/assets/index.html",
+            "/api/device/x/power/on",
+        ] {
+            let response = reqwest::get(format!("{base}{path}")).await?;
+            assert_eq!(response.status().as_u16(), 403, "{path}");
+        }
+        Ok(())
+    }
+
+    /// Ingress serves the page below a path of its own, where a link that
+    /// starts with "/" would leave the bridge
+    #[test]
+    fn the_web_page_uses_only_relative_links() {
+        for (name, text) in [
+            ("index.html", include_str!("../../assets/index.html")),
+            ("report.html", include_str!("../../assets/report.html")),
+            ("report.js", include_str!("../../assets/report.js")),
+            (
+                "devices.js",
+                include_str!("../../assets/components/devices.js"),
+            ),
+        ] {
+            for quote in ['"', '\'', '`'] {
+                for root in ["/assets", "/api"] {
+                    let absolute = format!("{quote}{root}");
+                    assert!(!text.contains(&absolute), "{name} links to {absolute}");
+                }
+            }
+        }
+    }
 }

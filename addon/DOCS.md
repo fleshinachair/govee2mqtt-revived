@@ -75,7 +75,7 @@ To go back, stop this app and start the old one.
 [What to test](https://github.com/fleshinachair/govee2mqtt-revived/blob/main/TESTING.md)
 lists what has not been tried on real hardware.
 
-Open the app's web page (port 8056) and choose **Report a problem**. It builds a
+Choose **Open web UI** on this app's page, then **Report a problem**. It builds a
 report without names, IDs or addresses, which you check, download and attach to
 a GitHub issue yourself. Nothing is sent automatically, and issues are public.
 

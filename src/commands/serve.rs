@@ -1,8 +1,9 @@
 use crate::lan_api::Client as LanClient;
+use crate::opt_env_var;
 use crate::platform_api::{DeviceType, GoveeApiClient};
 use crate::service::device::Device;
 use crate::service::hass::spawn_hass_integration;
-use crate::service::http::run_http_server;
+use crate::service::http::{run_http_server, run_ingress_server};
 use crate::service::iot::start_iot_client;
 use crate::service::platform_mqtt::{resolve_ca_location, start_platform_mqtt_client};
 use crate::service::state::StateHandle;
@@ -418,6 +419,20 @@ impl ServeCommand {
                     log::warn!("platform MQTT: no API key available; not subscribing: {err:#}")
                 }
             }
+        }
+
+        // Set by the add-on; the web page still works without it
+        match opt_env_var::<u16>("GOVEE_INGRESS_PORT") {
+            Ok(Some(port)) if port != 0 => {
+                let state = state.clone();
+                tokio::spawn(async move {
+                    if let Err(err) = run_ingress_server(state, port).await {
+                        log::error!("{err:#}");
+                    }
+                });
+            }
+            Ok(_) => {}
+            Err(err) => log::warn!("ignoring GOVEE_INGRESS_PORT: {err:#}"),
         }
 
         run_http_server(state.clone(), self.http_addr, self.http_port)

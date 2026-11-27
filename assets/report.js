@@ -20,7 +20,7 @@ function updateIssueLink(version) {
 }
 
 async function load() {
-  const response = await fetch("/api/diagnostics");
+  const response = await fetch("../api/diagnostics");
   if (!response.ok) {
     throw new Error(`status ${response.status}`);
   }

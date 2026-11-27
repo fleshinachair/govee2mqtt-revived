@@ -16,9 +16,12 @@ services:
 
 apparmor: true
 
-webui: http://[HOST]:[PORT:8056]/assets/index.html
-#ingress: true
-#ingress_port: 8056
+# The web page opens inside Home Assistant. Port 0 has it pick a free port,
+# which suits host networking.
+ingress: true
+ingress_port: 0
+panel_icon: mdi:led-strip-variant
+panel_title: Govee
 
 # Host network access is required for LAN discovery
 host_network: true
