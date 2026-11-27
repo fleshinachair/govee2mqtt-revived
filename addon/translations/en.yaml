@@ -21,6 +21,11 @@ configuration:
       Device events (ice maker full, water empty, presence) come from Govee's
       cloud over a separate connection, used only if you have such a device.
       Set to true to turn it off.
+  ignore_devices:
+    name: Ignore Devices
+    description: >-
+      Device IDs, models or names, separated by commas, to leave out of Home
+      Assistant. After a restart, delete them under the MQTT integration.
   no_iot_control:
     name: No AWS IoT Control
     description: >-

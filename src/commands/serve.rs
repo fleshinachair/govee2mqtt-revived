@@ -33,6 +33,11 @@ pub struct ServeCommand {
 async fn poll_single_device(state: &StateHandle, device: &Device) -> anyhow::Result<()> {
     let now = Utc::now();
 
+    // Reading an ignored device would only use up Govee's request limit
+    if device.is_ignored() {
+        return Ok(());
+    }
+
     if device.is_ble_only_device() == Some(true) {
         // We can't poll this device, we have no ble support
         return Ok(());

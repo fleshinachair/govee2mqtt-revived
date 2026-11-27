@@ -145,6 +145,11 @@ if bashio::config.has_value mqtt_ca ; then
   export GOVEE_MQTT_CA
 fi
 
+if bashio::config.has_value ignore_devices ; then
+  GOVEE_IGNORE_DEVICES="$(bashio::config ignore_devices)"
+  export GOVEE_IGNORE_DEVICES
+fi
+
 if bashio::config.has_value no_iot_control ; then
   GOVEE_NO_IOT_CONTROL="$(bashio::config no_iot_control)"
   export GOVEE_NO_IOT_CONTROL

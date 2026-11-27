@@ -175,6 +175,24 @@ minutes for cloud-only devices and is not always accurate. A device known only
 over the LAN is never marked unavailable. The Status sensor and the **Request
 Platform API State** button stay usable.
 
+## Ignoring devices
+
+Govee goes on listing groups and devices you no longer have, so deleting them
+in Home Assistant does not last.
+
+|ENV|App Config|Default|Purpose|
+|---|----------|-------|-------|
+|`GOVEE_IGNORE_DEVICES=14092648,Old lamp`|`ignore_devices`|*(none)*|Device IDs, models or names, separated by commas, to leave out of Home Assistant|
+
+1. Add the device to the list. A model, such as `H6001`, ignores every device of
+   that model. IDs and names are shown on the bridge's web page and in its log.
+2. Restart the bridge.
+3. In Home Assistant, open **Settings → Devices & services → MQTT**, choose the
+   device, and delete it. It stays deleted.
+
+The device is still shown on the bridge's web page. Tap-to-Run scenes are not
+affected. Remove it from the list to bring it back.
+
 ## Lights that ignore commands
 
 Some older lights without LAN control accept commands sent over AWS IoT and do

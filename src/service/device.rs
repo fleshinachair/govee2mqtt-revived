@@ -52,6 +52,11 @@ fn sensor_poll_interval(setting: Option<&str>) -> chrono::Duration {
     }
 }
 
+/// Devices to leave out of Home Assistant, listed by device ID, model or name,
+/// separated by commas. Govee goes on listing groups and devices that no
+/// longer exist, so deleting them in Home Assistant alone doesn't last.
+const IGNORE_DEVICES_ENV_VAR: &str = "GOVEE_IGNORE_DEVICES";
+
 #[derive(Default, Clone, Debug)]
 pub struct Device {
     pub sku: String,
@@ -941,6 +946,18 @@ impl Device {
             .unwrap_or(false)
     }
 
+    pub fn is_ignored(&self) -> bool {
+        std::env::var(IGNORE_DEVICES_ENV_VAR).is_ok_and(|list| self.is_named_in(&list))
+    }
+
+    fn is_named_in(&self, list: &str) -> bool {
+        let name = self.name();
+        is_listed_device(list, &self.sku, &self.id)
+            || list
+                .split(',')
+                .any(|entry| entry.trim().to_lowercase() == name.to_lowercase())
+    }
+
     pub fn iot_api_supported(&self) -> bool {
         if std::env::var(NO_IOT_CONTROL_ENV_VAR)
             .is_ok_and(|list| is_listed_device(&list, &self.sku, &self.id))
@@ -1036,6 +1053,19 @@ mod test {
         assert_eq!(seconds(Some("5")), 60);
         assert_eq!(seconds(Some("-1")), 60);
         assert_eq!(seconds(Some("86400")), 900);
+    }
+
+    /// wez/govee2mqtt#333, #436 and #721
+    #[test]
+    fn devices_to_ignore_can_be_given_by_id_model_or_name() {
+        let group = Device::new("SameModeGroup", "14092648");
+        let name = group.name();
+        assert!(group.is_named_in("14092648"));
+        assert!(group.is_named_in("samemodegroup"));
+        assert!(group.is_named_in(&format!("H6159, {}", name.to_uppercase())));
+        assert!(!group.is_named_in(""));
+        assert!(!group.is_named_in(" , "));
+        assert!(!group.is_named_in("H6159,14092649"));
     }
 
     #[test]

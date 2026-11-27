@@ -168,7 +168,7 @@ pub async fn enumerate_entities_for_device(
     state: &StateHandle,
     entities: &mut EntityList,
 ) -> anyhow::Result<()> {
-    if !d.is_controllable() {
+    if !d.is_controllable() || d.is_ignored() {
         return Ok(());
     }
 

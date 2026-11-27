@@ -60,5 +60,6 @@ schema:
   music_palette: "bool?"
   offline_unavailable: "bool?"
   disable_platform_mqtt: "bool?"
+  ignore_devices: "str?"
   no_iot_control: "str?"
   sensor_poll_interval: "int(60,900)?"
