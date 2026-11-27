@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
   <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -26,13 +26,21 @@
 }
 </script>
 
-    <script type="module" src="color-modes.js"></script>
+    <script src="theme.js"></script>
     <script type="module" src="components/devices.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/timeago.js@4.0.2/dist/timeago.min.js"></script>
   </head>
   <body>
     <main class="container-fluid px-4 py-4">
       <header class="device-list-header mb-4">
+        <div class="theme-picker">
+          <label for="theme" class="small text-body-secondary">Theme</label>
+          <select id="theme" class="form-select form-select-sm w-auto">
+            <option value="auto">Follow system</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
         <h1>Govee2MQTT</h1>
         <p class="text-body-secondary mb-0">Devices discovered by Govee2MQTT</p>
         <p class="mb-0"><a href="report.html">Report a problem</a></p>

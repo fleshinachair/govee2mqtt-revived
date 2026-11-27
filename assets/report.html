@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,11 +7,19 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <link href="bootstrap.min.css" rel="stylesheet" />
     <link href="style.css" rel="stylesheet" />
-    <script type="module" src="color-modes.js"></script>
+    <script src="theme.js"></script>
     <script type="module" src="report.js"></script>
   </head>
   <body>
     <main class="container py-4">
+      <div class="theme-picker">
+        <label for="theme" class="small text-body-secondary">Theme</label>
+        <select id="theme" class="form-select form-select-sm w-auto">
+          <option value="auto">Follow system</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
       <p><a href="index.html">&larr; Back to devices</a></p>
       <h1>Report a problem</h1>
       <p>

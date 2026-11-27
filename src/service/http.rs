@@ -425,6 +425,7 @@ mod ingress_test {
             ("index.html", include_str!("../../assets/index.html")),
             ("report.html", include_str!("../../assets/report.html")),
             ("report.js", include_str!("../../assets/report.js")),
+            ("theme.js", include_str!("../../assets/theme.js")),
             (
                 "devices.js",
                 include_str!("../../assets/components/devices.js"),

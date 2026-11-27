@@ -8,6 +8,13 @@ body {
   margin: 0 0 0.25rem;
 }
 
+.theme-picker {
+  display: flex;
+  float: right;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .device-status-summary,
 .device-row-badges {
   display: flex;
@@ -23,4 +30,11 @@ body {
 
 .device-room-section table {
   min-width: 860px;
+}
+
+/* Bootstrap keeps this row pale yellow in dark mode */
+[data-bs-theme="dark"] .table-warning {
+  --bs-table-color: var(--bs-warning-text-emphasis);
+  --bs-table-bg: var(--bs-warning-bg-subtle);
+  --bs-table-border-color: var(--bs-warning-border-subtle);
 }
