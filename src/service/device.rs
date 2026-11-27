@@ -1403,15 +1403,15 @@ mod test {
     #[test]
     fn color_temp_unknown_lan_sku_prefers_platform_range() {
         // An SKU with no quirk entry, discovered via LAN, that the
-        // Platform API says supports 2700-6500K (eg: H60C1)
-        let mut device = Device::new("H60C1", "AA:BB:CC:DD:EE:FF:42:2A");
-        device.lan_device = Some(lan_device("H60C1"));
+        // Platform API says supports 2700-6500K (H9999 stands in)
+        let mut device = Device::new("H9999", "AA:BB:CC:DD:EE:FF:42:2A");
+        device.lan_device = Some(lan_device("H9999"));
         assert_eq!(
             device.get_color_temperature_range(),
             Some(DEFAULT_COLOR_TEMP_RANGE)
         );
 
-        device.http_device_info = Some(http_info_with_color_temp("H60C1", 2700, 6500));
+        device.http_device_info = Some(http_info_with_color_temp("H9999", 2700, 6500));
         assert_eq!(device.get_color_temperature_range(), Some((2700, 6500)));
     }
 
@@ -1425,10 +1425,10 @@ mod test {
 
     #[test]
     fn color_temp_unusable_platform_range_is_ignored() {
-        let mut device = Device::new("H60C1", "AA:BB:CC:DD:EE:FF:42:2A");
-        device.lan_device = Some(lan_device("H60C1"));
+        let mut device = Device::new("H9999", "AA:BB:CC:DD:EE:FF:42:2A");
+        device.lan_device = Some(lan_device("H9999"));
         for (min, max) in [(0, 0), (0, 6500), (6500, 2700), (4000, 4000)] {
-            device.http_device_info = Some(http_info_with_color_temp("H60C1", min, max));
+            device.http_device_info = Some(http_info_with_color_temp("H9999", min, max));
             assert_eq!(
                 device.get_color_temperature_range(),
                 Some(DEFAULT_COLOR_TEMP_RANGE),
