@@ -342,6 +342,21 @@ impl Device {
         format!("{}_{}", self.sku, &id[id.len().saturating_sub(4)..])
     }
 
+    /// The battery level from the account's device list. The Platform, LAN
+    /// and IoT APIs don't report it.
+    pub fn battery_percent(&self) -> Option<u8> {
+        let settings = &self
+            .undoc_device_info
+            .as_ref()?
+            .entry
+            .device_ext
+            .device_settings;
+        settings
+            .battery
+            .and_then(|level| u8::try_from(level).ok())
+            .filter(|level| *level <= 100)
+    }
+
     pub fn preferred_poll_interval(&self) -> chrono::Duration {
         match self.device_type() {
             // If the kettle is on, read its temperature more frequently

@@ -11,9 +11,9 @@ use crate::hass_mqtt::number::{has_adjustable_range, MusicSensitivityNumber, Wor
 use crate::hass_mqtt::scene::SceneConfig;
 use crate::hass_mqtt::select::{SceneModeSelect, WorkModeSelect};
 use crate::hass_mqtt::sensor::{
-    CapabilitySensor, DeviceStatusDiagnostic, EnergyMonitoringSensor, GlobalFixedDiagnostic,
-    KettleHeatingState, KettleKeepWarmRemaining, KettlePlacedOnBase, SceneInfoSensor,
-    ENERGY_MONITORING_READINGS,
+    BatterySensor, CapabilitySensor, DeviceStatusDiagnostic, EnergyMonitoringSensor,
+    GlobalFixedDiagnostic, KettleHeatingState, KettleKeepWarmRemaining, KettlePlacedOnBase,
+    SceneInfoSensor, ENERGY_MONITORING_READINGS,
 };
 use crate::hass_mqtt::switch::{AutoStopSwitch, CapabilitySwitch};
 use crate::hass_mqtt::work_mode::ParsedWorkMode;
@@ -173,6 +173,9 @@ pub async fn enumerate_entities_for_device(
     }
 
     entities.add(DeviceStatusDiagnostic::new(d, state));
+    if d.battery_percent().is_some() {
+        entities.add(BatterySensor::new(d, state));
+    }
     entities.add(ButtonConfig::request_platform_data_for_device(d)?);
 
     // Add scene cycling buttons for devices that support scenes

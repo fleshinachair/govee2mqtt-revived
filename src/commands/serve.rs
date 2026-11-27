@@ -171,9 +171,20 @@ async fn enumerate_devices_via_undo_api(
         group_by_id.insert(group.group_id, group.group_name);
     }
     for entry in info.devices {
-        let mut device = state.device_mut(&entry.sku, &entry.device).await;
+        let id = entry.device.clone();
         let room_name = group_by_id.get(&entry.group_id).map(|name| name.as_str());
-        device.set_undoc_device_info(entry, room_name);
+        let battery_changed = {
+            let mut device = state.device_mut(&entry.sku, &entry.device).await;
+            let before = device.battery_percent();
+            device.set_undoc_device_info(entry, room_name);
+            before.is_some() && device.battery_percent() != before
+        };
+        // Nothing else tells Home Assistant about a new battery level
+        if battery_changed {
+            if let Err(err) = state.notify_of_state_change(&id).await {
+                log::warn!("while reporting a battery level: {err:#}");
+            }
+        }
     }
 
     match account {

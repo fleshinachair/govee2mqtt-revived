@@ -555,6 +555,60 @@ impl EntityInstance for EnergyMonitoringSensor {
     }
 }
 
+pub struct BatterySensor {
+    sensor: SensorConfig,
+    device_id: String,
+    state: StateHandle,
+}
+
+impl BatterySensor {
+    pub fn new(device: &ServiceDevice, state: &StateHandle) -> Self {
+        let unique_id = format!("sensor-{id}-gv2mqtt-battery", id = topic_safe_id(device));
+
+        Self {
+            sensor: SensorConfig {
+                base: EntityConfig {
+                    availability_topic: availability_topic(),
+                    name: Some("Battery".to_string()),
+                    entity_category: Some("diagnostic".to_string()),
+                    origin: Origin::default(),
+                    device: Device::for_device(device),
+                    unique_id: unique_id.clone(),
+                    device_class: Some("battery"),
+                    icon: None,
+                },
+                state_topic: format!("gv2mqtt/sensor/{unique_id}/state"),
+                state_class: Some(StateClass::Measurement),
+                json_attributes_topic: None,
+                value_template: None,
+                last_reset_value_template: None,
+                unit_of_measurement: Some("%"),
+            },
+            device_id: device.id.to_string(),
+            state: state.clone(),
+        }
+    }
+}
+
+#[async_trait]
+impl EntityInstance for BatterySensor {
+    async fn publish_config(&self, state: &StateHandle, client: &HassClient) -> anyhow::Result<()> {
+        self.sensor.publish(state, client).await
+    }
+
+    async fn notify_state(&self, client: &HassClient) -> anyhow::Result<()> {
+        let level = self
+            .state
+            .device_by_id(&self.device_id)
+            .await
+            .and_then(|device| device.battery_percent());
+        match level {
+            Some(level) => self.sensor.notify_state(client, &level.to_string()).await,
+            None => Ok(()),
+        }
+    }
+}
+
 pub struct DeviceStatusDiagnostic {
     sensor: SensorConfig,
     device_id: String,
@@ -1406,5 +1460,35 @@ mod energy_counter_test {
         let saved = serde_json::to_string(&counter).unwrap();
         let restored: EnergyCounterState = serde_json::from_str(&saved).unwrap();
         assert_eq!(restored, counter);
+    }
+}
+
+#[cfg(test)]
+mod battery_test {
+    use super::*;
+    use crate::undoc_api::DevicesResponse;
+
+    /// wez/govee2mqtt#646 and wez/govee2mqtt#668
+    #[test]
+    fn battery_level_comes_from_the_account_device_list() {
+        let list: DevicesResponse = crate::platform_api::from_json(include_str!(
+            "../../test-data/undoc-device-list-issue-21.json"
+        ))
+        .expect("fixture parses");
+
+        let mut levels = std::collections::BTreeMap::new();
+        for entry in list.devices {
+            let mut device = ServiceDevice::new(entry.sku.clone(), entry.device.clone());
+            assert_eq!(device.battery_percent(), None);
+            let sku = entry.sku.clone();
+            device.set_undoc_device_info(entry, None);
+            if let Some(level) = device.battery_percent() {
+                levels.entry(sku).or_insert_with(Vec::new).push(level);
+            }
+        }
+
+        assert!(levels["H5100"].contains(&15), "{levels:?}");
+        assert!(levels["H5179"].contains(&55), "{levels:?}");
+        assert!(levels.values().flatten().all(|level| *level <= 100));
     }
 }
