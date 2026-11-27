@@ -108,9 +108,10 @@ SKUs, and ids are not portable. The mapped SKUs live in
 | H607C | Floor lamp | Touching, Rhythm, Splash, Stippling, Hopping, Luminous, Blend, Fantasy, Spring |
 | H6020 | Table lamp | Rhythm, Beat A, Gridding, Energic, Dandelion, Drifting |
 | H60B0 | Uplighter floor lamp | Stippling, Hopping, Luminous, Rhythm, Flowing Light, Sprouting, Shiny |
+| H60B2 | Floor lamp, three sections | Bloom, Rhythm, Stippling |
 
 The style ids above were captured from app traffic and visually verified
-on the three SKUs. The palette frames themselves have live runtime
+on these SKUs. The palette frames themselves have live runtime
 verification on H607C only (2- and 5-colour writes, confirmed by the
 device's IoT echo and `aa 05 13` read-back — see `proof/`); on H6020 and
 H60B0 they rely on the shared classic dialect and golden tests against
