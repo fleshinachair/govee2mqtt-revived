@@ -35,8 +35,8 @@ expiry remain untested.
 ## Earlier status: eleventh pre-release
 
 The web page reads Home Assistant's theme through ingress. Checked in a headless
-browser against a stand-in parent page; the owner is to check it in their Home
-Assistant.
+browser against a stand-in parent page. The owner has since confirmed it works in
+their Home Assistant (on the thirteenth).
 
 ## Earlier status: tenth pre-release
 

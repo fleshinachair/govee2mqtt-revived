@@ -5,8 +5,9 @@ Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb6
 **This is a build for testers.** It passes its automated tests, but very little
 has been tried for real: earlier pre-releases ran on one setup with three lights
 on the LAN, and one contributor has since signed in to a real Govee account with
-two-step verification. On this build, the only thing reported back is that
-effects now work on an H607C controlled over the LAN.
+two-step verification. On this build, what has been reported back is that
+effects work on an H607C controlled over the LAN, and that the web page matches
+the Home Assistant theme.
 Take a Home Assistant backup first. Moving from wez's add-on: see
 [the migration steps](README.md#migrating-from-wezgovee2mqtt-zero-entity-loss).
 What to try, and how to report it: [TESTING.md](TESTING.md).
@@ -60,8 +61,8 @@ govee2mqtt-extended and pressing **Purge Caches** did not ask for a new code
   Assistant, it takes your theme's background and text colours and changes with
   it. **Light** and **Dark** still override this, and the browser remembers your
   choice (if you picked one on the tenth, pick it again). Opened directly on port
-  8056, it follows your device's setting. Not yet tried in a real Home
-  Assistant.
+  8056, it follows your device's setting. Confirmed since by the maintainer in
+  their Home Assistant.
 
 ## New since the ninth pre-release
 
