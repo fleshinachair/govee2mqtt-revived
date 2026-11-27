@@ -1,6 +1,6 @@
 name: "Govee to MQTT (Revived)"
 image: ghcr.io/fleshinachair/govee2mqtt-revived
-version: "2026.11.27-b2a4425d"
+version: "2026.11.27.1103"
 slug: govee2mqtt_revived
 description: Control Govee Devices
 url: https://github.com/fleshinachair/govee2mqtt-revived
