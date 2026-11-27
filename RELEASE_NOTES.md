@@ -1,4 +1,4 @@
-# Govee to MQTT (Revived): tenth pre-release
+# Govee to MQTT (Revived): eleventh pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
@@ -16,6 +16,15 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the tenth pre-release
+
+* **The web page matches your Home Assistant theme.** Opened inside Home
+  Assistant, it takes your theme's background and text colours and changes with
+  it. **Light** and **Dark** still override this, and the browser remembers your
+  choice (if you picked one on the tenth, pick it again). Opened directly on port
+  8056, it follows your device's setting. Not yet tried in a real Home
+  Assistant.
 
 ## New since the ninth pre-release
 

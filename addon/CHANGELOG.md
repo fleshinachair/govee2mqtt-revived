@@ -1,5 +1,11 @@
 # Changelog
 
+## Eleventh pre-release
+
+- The web page matches your Home Assistant theme
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Tenth pre-release
 
 - The web page has a Theme picker: follow system, light or dark

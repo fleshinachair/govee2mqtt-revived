@@ -15,7 +15,13 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: tenth pre-release
+## Status: eleventh pre-release
+
+The web page reads Home Assistant's theme through ingress. Checked in a headless
+browser against a stand-in parent page; the owner is to check it in their Home
+Assistant.
+
+## Earlier status: tenth pre-release
 
 Adds a theme picker to the web page. Checked in a headless browser against
 mock data, not inside Home Assistant.
