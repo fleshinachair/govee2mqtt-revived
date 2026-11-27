@@ -153,6 +153,7 @@ To go back, stop this add-on and start the old one.
 * [Installing the HASS Add-On](docs/ADDON.md) - for HAOS and Supervised HASS users
 * [Running it in Docker](docs/DOCKER.md)
 * [Configuration](docs/CONFIG.md)
+* [MQTT topics](docs/MQTT_TOPICS.md)
 
 ## Have a question?
 

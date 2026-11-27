@@ -437,6 +437,26 @@ mod test {
         assert_eq!(device_id_segment("totally/unrelated/topic/shape"), None);
     }
 
+    /// wez/govee2mqtt#102: people write access control lists from this list
+    #[test]
+    fn every_command_route_is_documented() {
+        let documented = include_str!("../../docs/MQTT_TOPICS.md");
+        for route in REGISTERED_COMMAND_ROUTES {
+            let topic: Vec<String> = route
+                .split('/')
+                .map(|segment| match segment.strip_prefix(':') {
+                    Some(name) => format!("<{name}>"),
+                    None => segment.to_string(),
+                })
+                .collect();
+            let topic = format!("`{}`", topic.join("/"));
+            assert!(
+                documented.contains(&topic),
+                "docs/MQTT_TOPICS.md does not list {topic}"
+            );
+        }
+    }
+
     #[test]
     fn registered_patterns_are_unique() {
         let mut seen = std::collections::BTreeSet::new();
