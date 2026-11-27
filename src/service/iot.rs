@@ -212,6 +212,11 @@ impl IotClient {
     }
 
     pub async fn activate_one_click(&self, item: &ParsedOneClick) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            !item.entries.is_empty(),
+            "{} has nothing that can be sent. Govee gives no command for some              actions, such as DreamView ones",
+            item.name
+        );
         for entry in &item.entries {
             for command in &entry.msgs {
                 self.client

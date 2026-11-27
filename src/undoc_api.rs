@@ -5,8 +5,8 @@ use crate::cache::{
 use crate::lan_api::{boolean_int, truthy};
 use crate::opt_env_var;
 use crate::platform_api::{
-    from_json, from_json_with_policy, http_response_body, DeviceCapability, DeviceCapabilityKind,
-    DeviceParameters, EnumOption, GoveeServerError,
+    from_json, from_json_with_policy, http_response_body, parse_each, DeviceCapability,
+    DeviceCapabilityKind, DeviceParameters, EnumOption, GoveeServerError,
 };
 use crate::sensitive::{
     describe_json_error_with_policy, describe_request_url, describe_sensitive_body_with_policy,
@@ -1194,29 +1194,67 @@ impl GoveeUndocumentedApi {
     pub async fn parse_one_clicks(&self) -> anyhow::Result<Vec<ParsedOneClick>> {
         let acct = self.login_account_cached().await?;
         let res = self.get_saved_one_click_shortcuts(&acct.token).await?;
-        let mut result = vec![];
+        Ok(sendable_one_clicks(res))
+    }
+}
 
-        for group in res {
-            for oc in group.one_clicks {
-                if oc.iot_rules.is_empty() {
-                    continue;
-                }
+/// Reduce the saved shortcuts to what can be sent over AWS IoT. Some actions,
+/// such as DreamView ones, have no topic or no message; a shortcut made only of
+/// those is kept, with no entries.
+fn sendable_one_clicks(components: Vec<OneClickComponent>) -> Vec<ParsedOneClick> {
+    let mut result = vec![];
 
-                let name = format!("One-Click: {}: {}", group.name, oc.name);
+    for group in components {
+        for oc in group.one_clicks {
+            if oc.iot_rules.is_empty() {
+                continue;
+            }
 
-                let mut entries = vec![];
-                for rule in oc.iot_rules {
-                    if let Some(topic) = rule.device_obj.topic {
-                        let msgs = rule.rule.into_iter().map(|r| r.iot_msg).collect();
+            let name = format!("One-Click: {}: {}", group.name, oc.name);
+
+            let mut entries = vec![];
+            for rule in oc.iot_rules {
+                if let Some(topic) = rule.device_obj.topic {
+                    let msgs: Vec<JsonValue> = rule
+                        .rule
+                        .into_iter()
+                        .map(|r| r.iot_msg)
+                        .filter(|msg| !msg.is_null())
+                        .collect();
+                    if !msgs.is_empty() {
                         entries.push(ParsedOneClickEntry { topic, msgs });
                     }
                 }
-
-                result.push(ParsedOneClick { name, entries });
             }
+
+            result.push(ParsedOneClick { name, entries });
         }
-        Ok(result)
     }
+    result
+}
+
+/// One malformed group of shortcuts must not hide all the others
+fn deserialize_one_click_components<'de, D>(
+    deserializer: D,
+) -> Result<Vec<OneClickComponent>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let (components, skipped) = parse_each(deserializer, "Tap-to-Run group")?;
+    // An empty list would be cached as the truth. Failing keeps the prior one.
+    if components.is_empty() && skipped > 0 {
+        return Err(serde::de::Error::custom(format!(
+            "none of the {skipped} Tap-to-Run groups could be parsed"
+        )));
+    }
+    Ok(components)
+}
+
+fn deserialize_one_clicks<'de, D>(deserializer: D) -> Result<Vec<OneClick>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(parse_each(deserializer, "Tap-to-Run shortcut")?.0)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1318,6 +1356,7 @@ pub struct OneClickResponse {
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(debug_assertions, serde(deny_unknown_fields))]
 pub struct OneClickComponentList {
+    #[serde(deserialize_with = "deserialize_one_click_components")]
     pub components: Vec<OneClickComponent>,
 }
 
@@ -1349,7 +1388,7 @@ pub struct OneClickComponent {
     pub h5_url: Option<String>,
     pub video_url: Option<String>,
 
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_one_clicks")]
     pub one_clicks: Vec<OneClick>,
 }
 
@@ -1678,6 +1717,63 @@ mod test {
     use std::net::TcpListener;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::thread::JoinHandle;
+
+    #[test]
+    fn dreamview_and_malformed_shortcuts_do_not_hide_the_others() {
+        // The DreamView action has the shape shown in wez/govee2mqtt#352
+        let device = |topic: JsonValue| {
+            serde_json::json!({
+                "topic": topic, "deviceSplicingStatus": 0, "feastId": 1,
+                "feastName": "Scenic DreamView", "feastType": 13, "isFeast": 1,
+                "subDevice": "", "subDeviceNum": 0
+            })
+        };
+        let rule = |iot_msg: &str| {
+            serde_json::json!({
+                "blueMsg": "", "cmdType": 31, "cmdVal": "{}", "deviceType": 0,
+                "iotMsg": iot_msg
+            })
+        };
+        let one_click = |name: &str, rules: JsonValue| {
+            serde_json::json!({
+                "name": name, "planType": 0, "presetId": 0, "presetState": 0,
+                "siriEngineId": 0, "type": 0, "desc": "", "groupId": 0,
+                "groupName": "", "iotRules": rules
+            })
+        };
+        let component = serde_json::json!({
+            "canManage": 1, "componentId": 1, "name": "Room", "type": 4,
+            "oneClicks": [
+                one_click("Dream", serde_json::json!([
+                    { "deviceObj": device(JsonValue::Null), "rule": [rule("")] }
+                ])),
+                { "name": "Broken" },
+                one_click("Lamp", serde_json::json!([
+                    {
+                        "deviceObj": device(serde_json::json!("GD/example")),
+                        "rule": [rule(""), rule("{\"msg\":{}}")]
+                    }
+                ])),
+            ]
+        });
+        let list: OneClickComponentList = from_json(
+            serde_json::to_vec(&serde_json::json!({
+                "components": [component, { "name": "Broken group" }]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let parsed = sendable_one_clicks(list.components);
+        let names: Vec<&str> = parsed.iter().map(|item| item.name.as_str()).collect();
+        assert_eq!(names, ["One-Click: Room: Dream", "One-Click: Room: Lamp"]);
+        assert!(parsed[0].entries.is_empty());
+        assert_eq!(parsed[1].entries.len(), 1);
+        assert_eq!(
+            parsed[1].entries[0].msgs,
+            [serde_json::json!({ "msg": {} })]
+        );
+    }
 
     enum TestHttpBody {
         DeclaredLength(usize),
