@@ -477,6 +477,10 @@ struct ScenePrefixRules {
     skus: &'static [&'static str],
     /// The multi-packet line prefix. Almost every model uses 0xa3.
     line_prefix: u8,
+    /// `(marker, length)` of a header to drop before the prefixes are applied,
+    /// for models whose parameters begin with a marker byte and a length
+    /// instead of with the scene data.
+    header: Option<(u8, usize)>,
     /// Ordered (prefix_to_remove, prefix_to_add) pairs. The first entry whose
     /// `prefix_to_remove` matches the start of the scene parameters wins.
     prefixes: &'static [(&'static [u8], &'static [u8])],
@@ -487,6 +491,7 @@ struct ScenePrefixRules {
 const GENERIC_SCENE_RULES: ScenePrefixRules = ScenePrefixRules {
     skus: &[],
     line_prefix: 0xa3,
+    header: None,
     prefixes: &[(&[], &[0x02])],
 };
 
@@ -498,21 +503,36 @@ const SCENE_PREFIX_RULES: &[ScenePrefixRules] = &[
     ScenePrefixRules {
         skus: &["H607C"],
         line_prefix: 0xa3,
+        header: None,
+        prefixes: &[(&[0x0a], &[0x0a]), (&[], &[0x02])],
+    },
+    // Same scene data as the H607C, but wrapped: `51 <length, 2 bytes>`, the
+    // 0x0a block, then a second length-prefixed block. The lamp ignores the
+    // upload with the header on it, and plays a different animation with the
+    // generic 0x02 in front. Everything after the header, sent as one upload,
+    // matched the Platform API by eye.
+    ScenePrefixRules {
+        skus: &["H60B0"],
+        line_prefix: 0xa3,
+        header: Some((0x51, 3)),
         prefixes: &[(&[0x0a], &[0x0a]), (&[], &[0x02])],
     },
     ScenePrefixRules {
         skus: &["H6022"],
         line_prefix: 0xa3,
+        header: None,
         prefixes: &[(&[0x41], &[0x58, 0x5a]), (&[0x00], &[0x04])],
     },
     ScenePrefixRules {
         skus: &["H6066"],
         line_prefix: 0xa3,
+        header: None,
         prefixes: &[(&[0x12, 0x00, 0x00, 0x00, 0x00], &[0x04]), (&[0x1d], &[])],
     },
     ScenePrefixRules {
         skus: &["H6065"],
         line_prefix: 0xa3,
+        header: None,
         prefixes: &[
             (&[0x12, 0x00, 0x0c, 0x00, 0x0f], &[0x04]),
             (&[0x12, 0x00, 0x00, 0x00, 0x00], &[0x04]),
@@ -521,22 +541,26 @@ const SCENE_PREFIX_RULES: &[ScenePrefixRules] = &[
     ScenePrefixRules {
         skus: &["H6092"],
         line_prefix: 0xa3,
+        header: None,
         prefixes: &[(&[0x21], &[0x56, 0x0b])],
     },
     ScenePrefixRules {
         skus: &["H6052"],
         line_prefix: 0xa3,
+        header: None,
         prefixes: &[(&[0x01, 0x11], &[0x07])],
     },
     // These models take the scene parameters unmodified.
     ScenePrefixRules {
         skus: &["H610A", "H6079"],
         line_prefix: 0xa3,
+        header: None,
         prefixes: &[],
     },
     ScenePrefixRules {
         skus: &["H70C4"],
         line_prefix: 0xa4,
+        header: None,
         prefixes: &[],
     },
 ];
@@ -552,6 +576,12 @@ impl ScenePrefixRules {
     /// Strip the model's expected prefix and substitute the replacement.
     /// If no rule matches, the parameters are used verbatim.
     fn apply(&self, params: Vec<u8>) -> Vec<u8> {
+        let params = match self.header {
+            Some((marker, len)) if params.first() == Some(&marker) && params.len() > len => {
+                params[len..].to_vec()
+            }
+            _ => params,
+        };
         for (remove, add) in self.prefixes {
             if params.starts_with(remove) {
                 let mut result = add.to_vec();
@@ -1210,6 +1240,19 @@ a3 ff 00 01 ff ff 00 00 00 00 00 00 00 00 00 00 00 00 00 5d
             vec![0x0a, 0x03, 0x2d, 0x00]
         );
         // A scene with no parameters still gets the generic prefix
+        assert_eq!(rules.apply(vec![]), vec![0x02]);
+    }
+
+    #[test]
+    fn scene_prefix_rules_h60b0_drop_the_wrapper_header() {
+        let rules = ScenePrefixRules::for_sku("H60B0");
+        // Start of the "Ocean" parameters from the H60B0 scene library
+        assert_eq!(
+            rules.apply(vec![0x51, 0x00, 0x6d, 0x0a, 0x03, 0x25]),
+            vec![0x0a, 0x03, 0x25]
+        );
+        // Too short to hold anything after the header: left for the prefixes
+        assert_eq!(rules.apply(vec![0x51]), vec![0x02, 0x51]);
         assert_eq!(rules.apply(vec![]), vec![0x02]);
     }
 
