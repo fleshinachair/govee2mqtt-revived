@@ -79,6 +79,16 @@ configuration:
     description: >-
       Password for your MQTT broker, if it requires authentication.
       Leave blank if you use the Mosquitto app.
+  mqtt_tls:
+    name: MQTT Over TLS
+    description: >-
+      Set to true to connect to your broker with TLS. Also set the broker host
+      and port yourself.
+  mqtt_ca:
+    name: MQTT Certificate Authority
+    description: >-
+      Only for a broker with its own certificate authority: the path of its
+      certificate file, such as /app/config/ca.crt. Turns TLS on.
   debug_level:
     name: Log Verbosity
     description: >-

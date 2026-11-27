@@ -135,6 +135,16 @@ if bashio::config.has_value disable_platform_mqtt ; then
   export GOVEE_DISABLE_PLATFORM_MQTT
 fi
 
+if bashio::config.has_value mqtt_tls ; then
+  GOVEE_MQTT_TLS="$(bashio::config mqtt_tls)"
+  export GOVEE_MQTT_TLS
+fi
+
+if bashio::config.has_value mqtt_ca ; then
+  GOVEE_MQTT_CA="$(bashio::config mqtt_ca)"
+  export GOVEE_MQTT_CA
+fi
+
 if bashio::config.has_value no_iot_control ; then
   GOVEE_NO_IOT_CONTROL="$(bashio::config no_iot_control)"
   export GOVEE_NO_IOT_CONTROL

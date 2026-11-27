@@ -16,6 +16,7 @@ use crate::lan_api::DeviceColor;
 use crate::opt_env_var;
 use crate::platform_api::{from_json, DeviceType};
 use crate::service::device::{Device as ServiceDevice, EnergyCounterState};
+use crate::service::platform_mqtt::{classify_ca, system_ca_location, CaLocation};
 use crate::service::state::StateHandle;
 use crate::temperature::TemperatureScale;
 use anyhow::Context;
@@ -25,6 +26,7 @@ use mosquitto_rs::{Client, Event, QoS};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::future::Future;
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -328,9 +330,21 @@ pub struct HassArguments {
 
     /// The mqtt broker port
     /// You may also set this via the GOVEE_MQTT_PORT environment variable.
-    /// If unspecified, uses 1883
+    /// If unspecified, uses 1883, or 8883 with TLS
     #[arg(long, global = true)]
     mqtt_port: Option<u16>,
+
+    /// Connect to the mqtt broker with TLS, trusting the system's
+    /// certificate authorities.
+    /// You may also set GOVEE_MQTT_TLS=true via the environment.
+    #[arg(long, global = true)]
+    mqtt_tls: bool,
+
+    /// Connect to the mqtt broker with TLS, trusting the certificate
+    /// authority in this PEM file or directory.
+    /// You may also set this via the GOVEE_MQTT_CA environment variable.
+    #[arg(long, global = true)]
+    mqtt_ca: Option<PathBuf>,
 
     /// The username to authenticate against the broker
     /// You may also set this via the GOVEE_MQTT_USER environment variable.
@@ -378,10 +392,41 @@ impl HassArguments {
     }
 
     pub fn mqtt_port(&self) -> anyhow::Result<u16> {
-        match self.mqtt_port {
-            Some(p) => Ok(p),
-            None => Ok(opt_env_var("GOVEE_MQTT_PORT")?.unwrap_or(1883)),
+        let port = match self.mqtt_port {
+            Some(p) => Some(p),
+            None => opt_env_var("GOVEE_MQTT_PORT")?,
+        };
+        match port {
+            Some(port) => Ok(port),
+            None => Ok(if self.mqtt_tls_ca()?.is_some() {
+                8883
+            } else {
+                1883
+            }),
         }
+    }
+
+    /// Who to trust for a TLS connection to the broker,
+    /// or `None` to connect without TLS
+    fn mqtt_tls_ca(&self) -> anyhow::Result<Option<CaLocation>> {
+        let ca = match &self.mqtt_ca {
+            Some(path) => Some(path.clone()),
+            None => opt_env_var::<PathBuf>("GOVEE_MQTT_CA")?,
+        };
+        if let Some(ca) = ca {
+            return classify_ca(ca).map(Some).context("GOVEE_MQTT_CA");
+        }
+
+        let tls = self.mqtt_tls
+            || match opt_env_var::<String>("GOVEE_MQTT_TLS")? {
+                Some(value) => crate::lan_api::truthy(&value).context("GOVEE_MQTT_TLS")?,
+                None => false,
+            };
+        if tls {
+            return system_ca_location().map(Some).context("GOVEE_MQTT_TLS");
+        }
+
+        Ok(None)
     }
 
     pub fn mqtt_username(&self) -> anyhow::Result<Option<String>> {
@@ -1447,6 +1492,11 @@ pub async fn spawn_hass_integration(
         );
     }
     client.set_username_and_password(mqtt_username.as_deref(), mqtt_password.as_deref())?;
+
+    if let Some(ca) = args.mqtt_tls_ca()? {
+        ca.configure(&client)?;
+        log::info!("Using TLS for the mqtt broker, trusting {ca:?}");
+    }
 
     let mut connected = false;
     for _ in 0..30 {
@@ -2540,5 +2590,62 @@ mod transition_test {
 
         drop(state.resolve_device_for_control_without_poll("AA:BB").await);
         assert!(ramp(&state).await.is_ok(), "superseded, so it stops");
+    }
+}
+
+#[cfg(test)]
+mod broker_tls_test {
+    use super::*;
+    use crate::service::iot::test_broker;
+    use std::mem::ManuallyDrop;
+
+    async fn connects(ca_file: &std::path::Path, port: u16) -> bool {
+        // Never dropped: destroying a mosquitto client hangs on Windows GNU
+        // builds.
+        let client = ManuallyDrop::new(
+            Client::with_id(&format!("g2m-{}", uuid::Uuid::new_v4().simple()), true).unwrap(),
+        );
+        classify_ca(ca_file.to_path_buf())
+            .unwrap()
+            .configure(&client)
+            .unwrap();
+        let connect = client.connect("localhost", port.into(), Duration::from_secs(60), None);
+        matches!(
+            tokio::time::timeout(Duration::from_secs(5), connect).await,
+            Ok(Ok(_))
+        )
+    }
+
+    /// wez/govee2mqtt#257: a broker with its own certificate authority
+    #[tokio::test]
+    async fn the_broker_certificate_is_checked_against_the_configured_ca() {
+        let broker = test_broker::start();
+        let other = test_broker::start();
+
+        assert!(!connects(&other.ca_file, broker.port).await);
+        assert!(connects(&broker.ca_file, broker.port).await);
+    }
+
+    #[test]
+    fn the_default_port_follows_tls() {
+        #[derive(clap::Parser)]
+        struct Args {
+            #[command(flatten)]
+            hass: HassArguments,
+        }
+        let port = |args: &[&str]| {
+            use clap::Parser;
+            let line = std::iter::once("govee").chain(args.iter().copied());
+            Args::parse_from(line).hass.mqtt_port().unwrap()
+        };
+
+        assert_eq!(port(&["--mqtt-port", "1234", "--mqtt-tls"]), 1234);
+        // Only meaningful where neither setting comes from the environment
+        if std::env::var_os("GOVEE_MQTT_PORT").is_none()
+            && std::env::var_os("GOVEE_MQTT_CA").is_none()
+            && std::env::var_os("GOVEE_MQTT_TLS").is_none()
+        {
+            assert_eq!(port(&[]), 1883);
+        }
     }
 }

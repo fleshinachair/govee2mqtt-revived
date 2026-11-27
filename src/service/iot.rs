@@ -814,7 +814,129 @@ mod test {
 }
 
 #[cfg(test)]
+/// A TLS listener that speaks just enough MQTT to accept a CONNECT.
+/// It drops the first connection at the TCP level, without a TLS
+/// close_notify, which is what the AWS IoT endpoint was observed to do.
+pub(crate) mod test_broker {
+    use openssl::asn1::Asn1Time;
+    use openssl::hash::MessageDigest;
+    use openssl::pkey::PKey;
+    use openssl::rsa::Rsa;
+    use openssl::ssl::{SslAcceptor, SslMethod};
+    use openssl::x509::extension::SubjectAlternativeName;
+    use openssl::x509::{X509NameBuilder, X509};
+    use std::io::{Read, Write};
+    use std::net::{Shutdown, TcpListener};
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    pub struct Broker {
+        pub port: u16,
+        pub ca_file: PathBuf,
+        pub connections: Arc<AtomicUsize>,
+    }
+
+    fn read_packet(stream: &mut impl Read) -> std::io::Result<u8> {
+        let mut header = [0u8; 1];
+        stream.read_exact(&mut header)?;
+        let mut remaining = 0usize;
+        let mut shift = 0;
+        loop {
+            let mut b = [0u8; 1];
+            stream.read_exact(&mut b)?;
+            remaining |= ((b[0] & 0x7f) as usize) << shift;
+            shift += 7;
+            if b[0] & 0x80 == 0 {
+                break;
+            }
+        }
+        let mut body = vec![0u8; remaining];
+        stream.read_exact(&mut body)?;
+        Ok(header[0] & 0xf0)
+    }
+
+    pub fn start() -> Broker {
+        let rsa = Rsa::generate(2048).unwrap();
+        let key = PKey::from_rsa(rsa).unwrap();
+        let mut name = X509NameBuilder::new().unwrap();
+        name.append_entry_by_text("CN", "localhost").unwrap();
+        let name = name.build();
+        let mut cert = X509::builder().unwrap();
+        cert.set_version(2).unwrap();
+        cert.set_subject_name(&name).unwrap();
+        cert.set_issuer_name(&name).unwrap();
+        cert.set_pubkey(&key).unwrap();
+        cert.set_not_before(&Asn1Time::days_from_now(0).unwrap())
+            .unwrap();
+        cert.set_not_after(&Asn1Time::days_from_now(1).unwrap())
+            .unwrap();
+        let san = SubjectAlternativeName::new()
+            .dns("localhost")
+            .ip("127.0.0.1")
+            .build(&cert.x509v3_context(None, None))
+            .unwrap();
+        cert.append_extension(san).unwrap();
+        cert.sign(&key, MessageDigest::sha256()).unwrap();
+        let cert = cert.build();
+
+        let dir = std::env::temp_dir().join(format!(
+            "govee2mqtt-iot-test-{}-{}",
+            std::process::id(),
+            uuid::Uuid::new_v4().simple()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let ca_file = dir.join("ca.pem");
+        std::fs::write(&ca_file, cert.to_pem().unwrap()).unwrap();
+
+        let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        acceptor.set_private_key(&key).unwrap();
+        acceptor.set_certificate(&cert).unwrap();
+        let acceptor = acceptor.build();
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let connections = Arc::new(AtomicUsize::new(0));
+        let counter = connections.clone();
+
+        std::thread::spawn(move || {
+            let mut keep = vec![];
+            for tcp in listener.incoming() {
+                let Ok(tcp) = tcp else { continue };
+                let Ok(mut tls) = acceptor.accept(tcp) else {
+                    continue;
+                };
+                // 0x10 is CONNECT
+                if read_packet(&mut tls).ok() != Some(0x10) {
+                    continue;
+                }
+                // CONNACK, session not present, accepted
+                if tls.write_all(&[0x20, 0x02, 0x00, 0x00]).is_err() {
+                    continue;
+                }
+                let n = counter.fetch_add(1, Ordering::SeqCst);
+                if n == 0 {
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    // Close the TCP connection under the TLS session,
+                    // with no close_notify.
+                    let _ = tls.get_ref().shutdown(Shutdown::Both);
+                } else {
+                    keep.push(tls);
+                }
+            }
+        });
+
+        Broker {
+            port,
+            ca_file,
+            connections,
+        }
+    }
+}
+
+#[cfg(test)]
 mod reconnect_test {
+    use super::test_broker;
     use super::*;
     use mosquitto_rs::{ConnectionStatus, ReasonCode};
 
@@ -920,128 +1042,8 @@ mod reconnect_test {
         assert_eq!(seen, vec![5, 10, 20, 40, 80, 160, 300, 300, 300, 300]);
     }
 
-    /// A TLS listener that speaks just enough MQTT to accept a CONNECT.
-    /// It drops the first connection at the TCP level, without a TLS
-    /// close_notify, which is what the AWS IoT endpoint was observed to do.
-    mod tls_eof_broker {
-        use openssl::asn1::Asn1Time;
-        use openssl::hash::MessageDigest;
-        use openssl::pkey::PKey;
-        use openssl::rsa::Rsa;
-        use openssl::ssl::{SslAcceptor, SslMethod};
-        use openssl::x509::extension::SubjectAlternativeName;
-        use openssl::x509::{X509NameBuilder, X509};
-        use std::io::{Read, Write};
-        use std::net::{Shutdown, TcpListener};
-        use std::path::PathBuf;
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        use std::sync::Arc;
-
-        pub struct Broker {
-            pub port: u16,
-            pub ca_file: PathBuf,
-            pub connections: Arc<AtomicUsize>,
-        }
-
-        fn read_packet(stream: &mut impl Read) -> std::io::Result<u8> {
-            let mut header = [0u8; 1];
-            stream.read_exact(&mut header)?;
-            let mut remaining = 0usize;
-            let mut shift = 0;
-            loop {
-                let mut b = [0u8; 1];
-                stream.read_exact(&mut b)?;
-                remaining |= ((b[0] & 0x7f) as usize) << shift;
-                shift += 7;
-                if b[0] & 0x80 == 0 {
-                    break;
-                }
-            }
-            let mut body = vec![0u8; remaining];
-            stream.read_exact(&mut body)?;
-            Ok(header[0] & 0xf0)
-        }
-
-        pub fn start() -> Broker {
-            let rsa = Rsa::generate(2048).unwrap();
-            let key = PKey::from_rsa(rsa).unwrap();
-            let mut name = X509NameBuilder::new().unwrap();
-            name.append_entry_by_text("CN", "localhost").unwrap();
-            let name = name.build();
-            let mut cert = X509::builder().unwrap();
-            cert.set_version(2).unwrap();
-            cert.set_subject_name(&name).unwrap();
-            cert.set_issuer_name(&name).unwrap();
-            cert.set_pubkey(&key).unwrap();
-            cert.set_not_before(&Asn1Time::days_from_now(0).unwrap())
-                .unwrap();
-            cert.set_not_after(&Asn1Time::days_from_now(1).unwrap())
-                .unwrap();
-            let san = SubjectAlternativeName::new()
-                .dns("localhost")
-                .ip("127.0.0.1")
-                .build(&cert.x509v3_context(None, None))
-                .unwrap();
-            cert.append_extension(san).unwrap();
-            cert.sign(&key, MessageDigest::sha256()).unwrap();
-            let cert = cert.build();
-
-            let dir = std::env::temp_dir().join(format!(
-                "govee2mqtt-iot-test-{}-{}",
-                std::process::id(),
-                uuid::Uuid::new_v4().simple()
-            ));
-            std::fs::create_dir_all(&dir).unwrap();
-            let ca_file = dir.join("ca.pem");
-            std::fs::write(&ca_file, cert.to_pem().unwrap()).unwrap();
-
-            let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-            acceptor.set_private_key(&key).unwrap();
-            acceptor.set_certificate(&cert).unwrap();
-            let acceptor = acceptor.build();
-
-            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-            let port = listener.local_addr().unwrap().port();
-            let connections = Arc::new(AtomicUsize::new(0));
-            let counter = connections.clone();
-
-            std::thread::spawn(move || {
-                let mut keep = vec![];
-                for tcp in listener.incoming() {
-                    let Ok(tcp) = tcp else { continue };
-                    let Ok(mut tls) = acceptor.accept(tcp) else {
-                        continue;
-                    };
-                    // 0x10 is CONNECT
-                    if read_packet(&mut tls).ok() != Some(0x10) {
-                        continue;
-                    }
-                    // CONNACK, session not present, accepted
-                    if tls.write_all(&[0x20, 0x02, 0x00, 0x00]).is_err() {
-                        continue;
-                    }
-                    let n = counter.fetch_add(1, Ordering::SeqCst);
-                    if n == 0 {
-                        std::thread::sleep(std::time::Duration::from_millis(200));
-                        // Close the TCP connection under the TLS session,
-                        // with no close_notify.
-                        let _ = tls.get_ref().shutdown(Shutdown::Both);
-                    } else {
-                        keep.push(tls);
-                    }
-                }
-            });
-
-            Broker {
-                port,
-                ca_file,
-                connections,
-            }
-        }
-    }
-
     async fn connect_test_client(
-        broker: &tls_eof_broker::Broker,
+        broker: &test_broker::Broker,
         id: &str,
     ) -> std::mem::ManuallyDrop<mosquitto_rs::Client> {
         // Never dropped: destroying a mosquitto client hangs on Windows GNU
@@ -1080,7 +1082,7 @@ mod reconnect_test {
     /// result so that run_iot_supervisor builds a fresh client.
     #[tokio::test]
     async fn tls_eof_without_close_notify_is_detected_as_a_stall() {
-        let broker = tls_eof_broker::start();
+        let broker = test_broker::start();
         let grace = Duration::from_secs(4);
 
         let client = connect_test_client(&broker, "govee2mqtt-test").await;

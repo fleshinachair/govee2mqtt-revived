@@ -52,8 +52,8 @@ const HEALTHY_CONNECTION: Duration = Duration::from_secs(60);
 
 type PollCooldown = Arc<Mutex<HashMap<String, Instant>>>;
 
-/// Where to find the trust roots used to validate the TLS connection to the
-/// Govee MQTT broker.
+/// Where to find the trust roots used to validate a TLS connection to an
+/// MQTT broker, ours or Govee's.
 #[derive(Debug, Clone)]
 pub enum CaLocation {
     /// A single PEM file containing one or more CA certificates.
@@ -63,7 +63,7 @@ pub enum CaLocation {
 }
 
 impl CaLocation {
-    fn configure(&self, client: &Client) -> anyhow::Result<()> {
+    pub(crate) fn configure(&self, client: &Client) -> anyhow::Result<()> {
         match self {
             CaLocation::File(file) => client.configure_tls(
                 Some(file),
@@ -80,13 +80,13 @@ impl CaLocation {
     }
 }
 
-fn classify_ca(path: PathBuf) -> anyhow::Result<CaLocation> {
+pub(crate) fn classify_ca(path: PathBuf) -> anyhow::Result<CaLocation> {
     if path.is_dir() {
         Ok(CaLocation::Path(path))
     } else if path.exists() {
         Ok(CaLocation::File(path))
     } else {
-        anyhow::bail!("configured platform MQTT CA location {path:?} does not exist");
+        anyhow::bail!("configured CA location {path:?} does not exist");
     }
 }
 
@@ -101,6 +101,14 @@ pub fn resolve_ca_location(override_path: Option<PathBuf>) -> anyhow::Result<CaL
         return classify_ca(path);
     }
 
+    system_ca_location().context(
+        "set GOVEE_MQTT_PLATFORM_CA (or --platform-mqtt-ca) to point at your CA \
+         certificate file or directory",
+    )
+}
+
+/// The certificate authorities that the operating system trusts
+pub(crate) fn system_ca_location() -> anyhow::Result<CaLocation> {
     // Common system CA bundle file locations across distributions.
     const CANDIDATE_FILES: &[&str] = &[
         "/etc/ssl/certs/ca-certificates.crt", // Debian/Ubuntu/distroless
@@ -120,11 +128,7 @@ pub fn resolve_ca_location(override_path: Option<PathBuf>) -> anyhow::Result<CaL
         return Ok(CaLocation::Path(dir.to_path_buf()));
     }
 
-    anyhow::bail!(
-        "could not locate a system CA bundle for the platform MQTT TLS connection; \
-         set GOVEE_MQTT_PLATFORM_CA (or --platform-mqtt-ca) to point at your CA \
-         certificate file or directory"
-    );
+    anyhow::bail!("could not locate a system CA bundle");
 }
 
 /// A device event/state message published by the Govee platform MQTT broker.
