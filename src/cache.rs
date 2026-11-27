@@ -162,10 +162,77 @@ fn remove_cache_file() -> anyhow::Result<()> {
     }
 }
 
-pub fn purge_cache() -> anyhow::Result<()> {
+/// A cache entry carried across a purge.
+struct KeptEntry {
+    topic: String,
+    key: String,
+    data: Vec<u8>,
+    ttl: Duration,
+}
+
+/// The parts of a stored [`CacheEntry`] that do not depend on its value type.
+#[derive(Deserialize)]
+struct EntryHeader {
+    expires: DateTime<Utc>,
+    result: serde_json::Value,
+}
+
+/// How much longer a stored entry is valid, if it is a successful result that
+/// has not expired. Cached failures and expired entries are not worth keeping.
+fn remaining_ttl_of_success(data: &[u8], now: DateTime<Utc>) -> Option<Duration> {
+    let header: EntryHeader = serde_json::from_slice(data).ok()?;
+    header.result.get("Ok")?;
+    (header.expires - now)
+        .to_std()
+        .ok()
+        .filter(|ttl| !ttl.is_zero())
+}
+
+fn snapshot_entries(cache: &Cache, keep: &[(&str, &str)]) -> Vec<KeptEntry> {
+    let now = Utc::now();
+    keep.iter()
+        .filter_map(|(topic, key)| {
+            let data = memory_get(topic, key)
+                .or_else(|| cache.topic(topic).ok()?.get(key).ok()?.map(|v| v.data))?;
+            let ttl = remaining_ttl_of_success(&data, now)?;
+            Some(KeptEntry {
+                topic: topic.to_string(),
+                key: key.to_string(),
+                data,
+                ttl,
+            })
+        })
+        .collect()
+}
+
+fn restore_entries(cache: &Cache, kept: Vec<KeptEntry>) {
+    for entry in kept {
+        let written = cache
+            .topic(&entry.topic)
+            .and_then(|topic| topic.set(&entry.key, &entry.data, entry.ttl));
+        if let Err(err) = written {
+            log::warn!(
+                "could not carry {}/{} across the cache purge: {err:#}. Keeping it in memory",
+                entry.topic,
+                entry.key
+            );
+            memory_put(&entry.topic, &entry.key, entry.data, entry.ttl);
+        }
+    }
+}
+
+/// Discard everything in the cache except the `(topic, key)` entries in `keep`.
+///
+/// The purge exists to re-fetch device, scene and Tap-to-Run data. The account
+/// login is not that kind of data: on an account with two-step verification a
+/// new login needs a code from the user's inbox, so dropping it turns the next
+/// restart into a failed startup until a fresh code is configured.
+pub fn purge_cache(keep: &[(&str, &str)]) -> anyhow::Result<()> {
+    let kept = snapshot_entries(&CACHE.load(), keep);
     memory_clear();
     let removed = remove_cache_file();
     CACHE.store(open_cache()?);
+    restore_entries(&CACHE.load(), kept);
     removed
 }
 
@@ -428,6 +495,65 @@ mod test {
             negative_ttl,
             allow_stale: false,
         }
+    }
+
+    #[tokio::test]
+    async fn purge_carries_a_live_success_into_the_new_cache() {
+        let old = fresh_cache();
+        let kept_options = CacheGetOptions {
+            topic: "undoc-api",
+            ..opts("purge-kept-login", Duration::from_secs(10))
+        };
+        cache_get_inner(&old, kept_options, async {
+            Ok::<_, anyhow::Error>(CacheComputeResult::Value("TOKEN".to_string()))
+        })
+        .await
+        .expect("seed the login entry");
+        cache_get_inner(&old, opts("purge-dropped-scenes", Duration::ZERO), async {
+            Ok::<_, anyhow::Error>(CacheComputeResult::Value("SCENES".to_string()))
+        })
+        .await
+        .expect("seed the device data entry");
+
+        let kept = snapshot_entries(&old, &[("undoc-api", "purge-kept-login")]);
+        let new = fresh_cache();
+        restore_entries(&new, kept);
+
+        let calls = AtomicUsize::new(0);
+        let login: String = cache_get_inner(&new, kept_options, async {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Ok::<_, anyhow::Error>(CacheComputeResult::Value("NEW LOGIN".to_string()))
+        })
+        .await
+        .expect("read the login entry after the purge");
+
+        assert_eq!(login, "TOKEN");
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            0,
+            "a kept login must not trigger a new login"
+        );
+        assert!(
+            new.topic("test")
+                .expect("open test topic")
+                .get("purge-dropped-scenes")
+                .expect("read dropped entry")
+                .is_none(),
+            "entries outside the keep list must not survive the purge"
+        );
+    }
+
+    #[test]
+    fn purge_does_not_keep_failures_or_expired_entries() {
+        let now = Utc::now();
+        let live = br#"{"expires": "2999-01-01T00:00:00Z", "result": {"Ok": "TOKEN"}}"#;
+        let failure = br#"{"expires": "2999-01-01T00:00:00Z", "result": {"Err": "x"}}"#;
+        let expired = br#"{"expires": "2000-01-01T00:00:00Z", "result": {"Ok": "TOKEN"}}"#;
+
+        assert!(remaining_ttl_of_success(live, now).is_some());
+        assert!(remaining_ttl_of_success(failure, now).is_none());
+        assert!(remaining_ttl_of_success(expired, now).is_none());
+        assert!(remaining_ttl_of_success(b"not json", now).is_none());
     }
 
     #[test]

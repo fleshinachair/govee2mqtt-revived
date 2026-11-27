@@ -624,6 +624,17 @@ impl GoveeUndocumentedApi {
         crate::cache::invalidate_key("undoc-api", "account-info").ok();
     }
 
+    /// Cache entries that hold this account's sign-in state rather than device
+    /// data: the login itself, and the record that a 2FA code was just
+    /// requested. A cache purge keeps them, because replacing either one needs
+    /// a new code from the user's inbox.
+    pub fn login_cache_keys(&self) -> Vec<(&'static str, String)> {
+        vec![
+            ("undoc-api", "account-info".to_string()),
+            ("undoc-api", self.verification_request_cache_key()),
+        ]
+    }
+
     /// Build the JSON body sent on every login request. The `code` field is
     /// added only when a 2FA verification code has been configured; sending an
     /// empty `code` to Govee for an account without 2FA causes a different

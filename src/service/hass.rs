@@ -1236,7 +1236,16 @@ async fn mqtt_light_segment_command(
 
 async fn mqtt_purge_caches(State(state): State<StateHandle>) -> anyhow::Result<()> {
     log::info!("mqtt_purge_caches");
-    crate::cache::purge_cache()?;
+    // Keep the account sign-in: see `cache::purge_cache`.
+    let login_keys = match state.get_undoc_client().await {
+        Some(undoc) => undoc.login_cache_keys(),
+        None => Vec::new(),
+    };
+    let keep: Vec<(&str, &str)> = login_keys
+        .iter()
+        .map(|(topic, key)| (*topic, key.as_str()))
+        .collect();
+    crate::cache::purge_cache(&keep)?;
     state.clear_scene_catalogs().await;
     state
         .get_hass_client()

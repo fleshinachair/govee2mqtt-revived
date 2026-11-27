@@ -6,7 +6,7 @@ When Govee2MQTT starts, it creates a special device called **"Govee to MQTT"**
 in Home Assistant (under the MQTT integration in Settings → Devices & Services).
 This is the bridge itself — not one of your Govee devices. It contains:
 
-- A **"Purge Caches"** button — forces Govee2MQTT to re-fetch device data from Govee's servers. Use this after adding new Tap-to-Run shortcuts or if devices seem stale.
+- A **"Purge Caches"** button — forces Govee2MQTT to re-fetch device data from Govee's servers. Use this after adding new Tap-to-Run shortcuts or if devices seem stale. It keeps your Govee account sign-in, so it does not ask for a new two-step verification code.
 - A **"Version"** sensor — shows which version of Govee2MQTT is running.
 - **Tap-to-Run** scenes — if you've set up shortcuts in the Govee Home app, they appear here as Scene entities.
 
