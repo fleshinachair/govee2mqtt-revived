@@ -51,6 +51,9 @@ pub struct Quirk {
     /// If true, the device reports electrical readings via IoT,
     /// but only when asked, so we poll it more often
     pub energy_monitoring: bool,
+    /// If true, the device applies brightness, colour and effect commands
+    /// while staying switched off, so it has to be switched on as well
+    pub explicit_power_on: bool,
 }
 
 impl Quirk {
@@ -76,6 +79,7 @@ impl Quirk {
             iot_api_supported: false,
             show_as_preset_buttons: None,
             energy_monitoring: false,
+            explicit_power_on: false,
         }
     }
 
@@ -174,6 +178,11 @@ impl Quirk {
 
     pub fn with_energy_monitoring(mut self) -> Self {
         self.energy_monitoring = true;
+        self
+    }
+
+    pub fn with_explicit_power_on(mut self) -> Self {
+        self.explicit_power_on = true;
         self
     }
 
@@ -435,7 +444,10 @@ fn load_quirks() -> HashMap<String, Quirk> {
         Quirk::lan_api_capable_light("H6144", STRIP),
         Quirk::lan_api_capable_light("H6169", TV_BACK),
         Quirk::lan_api_capable_light("H61BE", STRIP),
-        Quirk::lan_api_capable_light("H61C3", STRIP),
+        // Stays off when only given a brightness or colour. Diagnosed at
+        // <https://github.com/jacobmattar-cloud/govee-h61c3-power-on-quirk>,
+        // reported under <https://github.com/wez/govee2mqtt/issues/521>
+        Quirk::lan_api_capable_light("H61C3", STRIP).with_explicit_power_on(),
         Quirk::lan_api_capable_light("H61D3", STRIP),
         Quirk::lan_api_capable_light("H61D4", STRIP),
         Quirk::lan_api_capable_light("H61E0", STRIP),
@@ -480,6 +492,13 @@ mod test {
             let range = resolve_quirk(sku).and_then(|q| q.color_temp_range);
             assert_eq!(range, Some((2700, 6500)), "{sku}");
         }
+    }
+
+    #[test]
+    fn only_the_h61c3_needs_an_explicit_power_on() {
+        let needs = |sku| resolve_quirk(sku).map(|q| q.explicit_power_on);
+        assert_eq!(needs("H61C3"), Some(true));
+        assert_eq!(needs("H61A0"), Some(false));
     }
 
     #[test]

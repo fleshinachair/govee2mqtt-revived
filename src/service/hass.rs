@@ -818,6 +818,16 @@ struct HassLightCommand {
     transition: Option<f64>,
 }
 
+impl HassLightCommand {
+    /// Whether this asks for more than being switched on or off
+    fn has_attributes(&self) -> bool {
+        self.brightness.is_some()
+            || self.color.is_some()
+            || self.color_temp.is_some()
+            || self.effect.is_some()
+    }
+}
+
 /// The maximum accepted transition duration, in seconds. HA itself allows
 /// arbitrarily large values; we clamp so that a stray number cannot hold
 /// the device coordinator open essentially forever.
@@ -956,6 +966,17 @@ async fn mqtt_light_command(
                 .context("mqtt_light_command: state.device_set_brightness")?;
         }
     } else {
+        // Without attributes, the power-on below covers it
+        let explicit_power_on = device
+            .resolve_quirk()
+            .is_some_and(|quirk| quirk.explicit_power_on);
+        if explicit_power_on && is_light && command.has_attributes() {
+            state
+                .device_light_power_on(&device, true)
+                .await
+                .context("mqtt_light_command: state.device_power_on")?;
+        }
+
         let transition = command
             .transition
             .map(clamp_transition_seconds)
@@ -1564,6 +1585,19 @@ mod tests {
             camel_case_to_space_separated("用于三灯头中的第二个"),
             "用于三灯头中的第二个"
         );
+    }
+
+    #[test]
+    fn a_light_command_with_attributes_is_told_apart() {
+        let has = |payload: &str| {
+            serde_json::from_str::<HassLightCommand>(payload).map(|c| c.has_attributes())
+        };
+        assert!(!has(r#"{"state":"ON"}"#).unwrap());
+        assert!(!has(r#"{"state":"ON","transition":3}"#).unwrap());
+        assert!(has(r#"{"state":"ON","brightness":50}"#).unwrap());
+        assert!(has(r#"{"state":"ON","color_temp":4000}"#).unwrap());
+        assert!(has(r#"{"state":"ON","color":{"r":1,"g":2,"b":3}}"#).unwrap());
+        assert!(has(r#"{"state":"ON","effect":"Sunset"}"#).unwrap());
     }
 
     #[test]
