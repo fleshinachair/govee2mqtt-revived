@@ -1,4 +1,4 @@
-# Govee to MQTT (Revived): ninth pre-release
+# Govee to MQTT (Revived): tenth pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
@@ -16,6 +16,13 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the ninth pre-release
+
+* **Light and dark themes on the web page.** A **Theme** picker offers Follow
+  system, Light and Dark, and the browser remembers the choice. Follow system,
+  the default, uses your device's setting, not the theme chosen in Home
+  Assistant. If you do not see the picker, reload the page.
 
 ## New since the eighth pre-release
 

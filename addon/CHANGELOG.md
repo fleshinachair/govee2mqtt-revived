@@ -1,5 +1,11 @@
 # Changelog
 
+## Tenth pre-release
+
+- The web page has a Theme picker: follow system, light or dark
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Ninth pre-release
 
 - Purge Caches no longer signs you out of your Govee account, so two-step

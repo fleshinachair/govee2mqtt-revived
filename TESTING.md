@@ -66,6 +66,12 @@ New in the fourth pre-release:
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 
+New in the tenth pre-release:
+
+| You have | Try | Tell us |
+|---|---|---|
+| The web page | Choose each **Theme**, then reload | Whether the choice is kept and everything is readable |
+
 New in the ninth pre-release:
 
 | You have | Try | Tell us |

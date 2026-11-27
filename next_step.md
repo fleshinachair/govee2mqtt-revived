@@ -15,7 +15,12 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: ninth pre-release
+## Status: tenth pre-release
+
+Adds a theme picker to the web page. Checked in a headless browser against
+mock data, not inside Home Assistant.
+
+## Earlier status: ninth pre-release
 
 The first outside contribution: fleshinachair/govee2mqtt-revived#1 to #4, from
 Paulo Silveira, who offers to test on a real two-step verification account.
