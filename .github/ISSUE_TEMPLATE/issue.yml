@@ -18,7 +18,7 @@ body:
       label: Govee2MQTT Version
       description: |
         The version of Govee2MQTT that you are running
-      placeholder: "ex: 2024.01.10-5d35fb9b"
+      placeholder: "ex: 2026.11.27.1130"
     validations:
       required: true
   - type: textarea

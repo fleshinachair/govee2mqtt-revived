@@ -330,6 +330,6 @@ Image names under `ghcr.io/fleshinachair/`:
 Never give a standalone image a bare release tag; it would collide with the
 add-on's. Release steps are in `next_step.md`.
 
-`scripts/tag-release.sh` creates a `YYYY.MM.DD-<sha8>` tag, writes that version
+`scripts/tag-release.sh` creates a `YYYY.MM.DD.HHMM` (commit time, UTC) tag, writes that version
 into `addon/config.yaml` (`apply-tag.sh`), regenerates `addon/CHANGELOG.md` with
 git-cliff, and commits.

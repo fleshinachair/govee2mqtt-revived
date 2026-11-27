@@ -8,13 +8,13 @@ fn main() {
             ci_tag = s.trim().to_string();
         }
     } else if let Ok(output) = std::process::Command::new("git")
+        // The same version as scripts/apply-tag.sh derives
+        .env("TZ", "UTC0")
         .args([
-            "-c",
-            "core.abbrev=8",
             "show",
             "-s",
-            "--format=%cd-%h",
-            "--date=format:%Y.%m.%d",
+            "--format=%cd",
+            "--date=format-local:%Y.%m.%d.%H%M",
         ])
         .output()
     {
