@@ -170,8 +170,13 @@ if bashio::config.has_value http_port ; then
   export HTTP_PORT
 fi
 
-# The port that Home Assistant's "Open web UI" button talks to
-ingress_port="$(bashio::addon.ingress_port || true)"
+# The port that Home Assistant's "Open web UI" button talks to. Newer base
+# images renamed the helper and warn about the old name.
+if declare -F bashio::app.ingress_port > /dev/null; then
+  ingress_port="$(bashio::app.ingress_port || true)"
+else
+  ingress_port="$(bashio::addon.ingress_port || true)"
+fi
 if [[ "${ingress_port}" =~ ^[1-9][0-9]*$ ]]; then
   export GOVEE_INGRESS_PORT="${ingress_port}"
 fi
