@@ -134,8 +134,7 @@ To go back, stop this add-on and start the old one.
 
 ## Have a question?
 
-* Found a problem? The web page on port 8056 has **Report a problem** (not in
-  the third pre-release yet)
+* Found a problem? The web page on port 8056 has **Report a problem**
 * [Is my device supported?](docs/SKUS.md)
 * [Check out the FAQ](docs/FAQ.md)
 * [LAN API troubleshooting](docs/LAN.md)

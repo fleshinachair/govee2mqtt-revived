@@ -25,7 +25,7 @@ the reporter's hardware or account. If one of these is yours,
 | Sensor values shown as `{"value": 6}` | [#510](https://github.com/wez/govee2mqtt/issues/510), [#555](https://github.com/wez/govee2mqtt/issues/555) |
 | No native fan entity | [#87](https://github.com/wez/govee2mqtt/issues/87), [#262](https://github.com/wez/govee2mqtt/issues/262) |
 | Passwords from Docker secrets | [#362](https://github.com/wez/govee2mqtt/issues/362) |
-| Repeated requests after "too many requests" (not released yet) | [#542](https://github.com/wez/govee2mqtt/issues/542) |
+| Repeated requests after "too many requests" | [#542](https://github.com/wez/govee2mqtt/issues/542) |
 | DreamView entries causing errors or hiding Tap-to-Run | [#317](https://github.com/wez/govee2mqtt/issues/317), [#352](https://github.com/wez/govee2mqtt/issues/352), [#381](https://github.com/wez/govee2mqtt/issues/381) |
 
 Some of these are only *expected* to be fixed, because a change addresses the
@@ -50,7 +50,6 @@ two-step verification.
 ## Might be helped
 
 A change here touches the problem, but may not solve all of it: [#67](https://github.com/wez/govee2mqtt/issues/67), [#185](https://github.com/wez/govee2mqtt/issues/185), [#193](https://github.com/wez/govee2mqtt/issues/193), [#272](https://github.com/wez/govee2mqtt/issues/272), [#283](https://github.com/wez/govee2mqtt/issues/283), [#288](https://github.com/wez/govee2mqtt/issues/288), [#297](https://github.com/wez/govee2mqtt/issues/297), [#323](https://github.com/wez/govee2mqtt/issues/323), [#372](https://github.com/wez/govee2mqtt/issues/372), [#636](https://github.com/wez/govee2mqtt/issues/636).
-The model additions and the colour temperature change are not released yet.
 
 ## Reported more than once, still open
 

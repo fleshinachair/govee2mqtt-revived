@@ -58,7 +58,7 @@ These are new since the first pre-release. The first one,
 | A switch that showed unknown | Switch it | Whether its state is now right |
 | A Govee login configured | Restart the add-on with the internet unplugged, then plug it back in | Whether it starts, and whether live updates return within about 10 minutes |
 
-Not released yet:
+New in the fourth pre-release:
 
 | You have | Try | Tell us |
 |---|---|---|
@@ -68,7 +68,7 @@ Not released yet:
 
 ## Reporting
 
-From versions after the third pre-release, the web page's **Report a problem**
+From the fourth pre-release, the web page's **Report a problem**
 does most of this for you. Otherwise open an
 [issue](https://github.com/fleshinachair/govee2mqtt-revived/issues) with:
 

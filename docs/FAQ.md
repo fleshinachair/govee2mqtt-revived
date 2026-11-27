@@ -56,7 +56,7 @@ If this happens after Home Assistant restarts, and restarting the add-on clears
 it, the bridge is probably not hearing Home Assistant come back. In the MQTT
 integration's options, the birth message topic should be `homeassistant/status`
 (or your discovery prefix followed by `/status`), with the payload `online`.
-`hass/status` is also accepted, from the release after the third pre-release.
+`hass/status` is also accepted, from the fourth pre-release.
 When the bridge hears it, the add-on log says
 `Home Assistant status changed: online`.
 

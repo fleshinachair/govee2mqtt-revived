@@ -1,13 +1,15 @@
-# Govee to MQTT (Revived): third pre-release
+# Govee to MQTT (Revived): fourth pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
 **This is a build for testers.** It passes its automated tests, but very little
-has been tried for real: so far only the second pre-release, which found three
-lights on the LAN and switched them on and off. Nothing has run against a Govee
-account. Take a Home Assistant backup first. Moving from wez's add-on: see
+has been tried for real: earlier pre-releases ran on one setup with three lights
+on the LAN. Nothing has run against a Govee account, and nothing new in this
+build has been tried on a real device. Take a Home Assistant backup first. Moving from wez's add-on: see
 [the migration steps](README.md#migrating-from-wezgovee2mqtt-zero-entity-loss).
 What to try, and how to report it: [TESTING.md](TESTING.md).
+
+**Needs Home Assistant 2025.2 or newer.**
 
 **Turn on the add-on's Watchdog switch.** The bridge now exits on purpose when it
 cannot recover by itself, and relies on being restarted.
@@ -15,20 +17,20 @@ cannot recover by itself, and relies on being restarted.
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
 
-## Not released yet
+## New since the third pre-release
 
 * Entities now come back after a Home Assistant restart on setups that announce
   themselves on `hass/status` and not `homeassistant/status`. Before, the
   bridge never heard the restart and everything stayed `unavailable` until the
   add-on was restarted too.
 * Light colour temperature is exchanged with Home Assistant in Kelvin, so limits
-  are exact (wez#731). **Needs Home Assistant 2025.2 or newer.**
+  are exact (wez#731). This is why Home Assistant 2025.2 is now needed.
 * 35 light models seen on the LAN in upstream reports are now in the model
   table. Where those reports showed a 2700-6500 K range, it is used, which
   should stop LAN-only setups sending values that leave a light dark (wez#742).
 * The web page has **Report a problem**: it builds a report without names, IDs
   or addresses for you to check and attach to a GitHub issue. Nothing is sent
-  automatically.
+  automatically. It has not been tried in a real browser.
 * When Govee says there are too many requests, status polling now pauses
   instead of retrying every 30 seconds (wez#542).
 * One Tap-to-Run entry that cannot be read no longer hides the others, and one
@@ -174,12 +176,15 @@ wez#424, wez#200).
   list lasts about a week without a successful fetch (wez#76).
 * High CPU use after an MQTT broker restart has been reported (wez#749).
 * Many missing device models are not added yet.
+* A Home Assistant whose MQTT birth message uses a topic other than
+  `<discovery prefix>/status` or `hass/status` is not heard restarting.
 
 ## Not in this build
 
 Upstream pull requests wez#724 (scene speed) and wez#698 (H1310 fan), which
 need testing on those devices first, and wez#736, for which a smaller fix was
-made instead. Remaining issues are listed in [next_step.md](next_step.md).
+made instead. What is and is not fixed is listed in
+[docs/STATUS.md](docs/STATUS.md).
 
 ## Not taken from govee2mqtt-extended
 
@@ -188,6 +193,5 @@ The CI setup here borrows their add-on build approach.
 
 ## How it was checked
 
-`cargo test` and `cargo clippy --all-targets` ran before code commits, on
-Windows. The release workflow runs the tests again on Linux and publishes
-nothing if they fail.
+The tests, formatting check and lint pass on Linux. The release workflow runs
+them again and publishes nothing if they fail.

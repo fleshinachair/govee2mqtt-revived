@@ -15,13 +15,13 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: third pre-release published; further changes not published
+## Status: fourth pre-release
 
-`2026.11.27-6d5c4d04` was published on 2026-11-27. The owner ran the second
-pre-release first: three lights were found on the LAN and switched on and off.
-The third fixes short light transitions. Work after it is listed in
-`RELEASE_NOTES.md` under "Not released yet"; the published picture of what is
-and is not fixed is `docs/STATUS.md`.
+Prepared on 2026-11-27. The owner ran the third pre-release,
+`2026.11.27-6d5c4d04`: after a Home Assistant restart every light stayed
+unavailable, because that Home Assistant announces itself on `hass/status`.
+The fourth listens there too; the owner has yet to retest it. What it contains
+is in `RELEASE_NOTES.md`; what is and is not fixed is in `docs/STATUS.md`.
 
 ## Earlier status: second pre-release
 

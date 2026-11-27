@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## Fourth pre-release
 
 - Needs Home Assistant 2025.2 or newer
 - Entities come back after a Home Assistant restart when Home Assistant
