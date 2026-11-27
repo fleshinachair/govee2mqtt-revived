@@ -17,6 +17,21 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::net::IpAddr;
 
+/// Devices the user asks us not to control over AWS IoT, listed by model
+/// (such as H6159) or device ID, separated by commas. Some older lights
+/// accept those commands and ignore them.
+const NO_IOT_CONTROL_ENV_VAR: &str = "GOVEE_NO_IOT_CONTROL";
+
+fn is_listed_device(list: &str, sku: &str, id: &str) -> bool {
+    let id = id.replace(':', "");
+    list.split(',')
+        .map(str::trim)
+        .filter(|entry| !entry.is_empty())
+        .any(|entry| {
+            entry.eq_ignore_ascii_case(sku) || entry.replace(':', "").eq_ignore_ascii_case(&id)
+        })
+}
+
 #[derive(Default, Clone, Debug)]
 pub struct Device {
     pub sku: String,
@@ -885,6 +900,12 @@ impl Device {
     }
 
     pub fn iot_api_supported(&self) -> bool {
+        if std::env::var(NO_IOT_CONTROL_ENV_VAR)
+            .is_ok_and(|list| is_listed_device(&list, &self.sku, &self.id))
+        {
+            return false;
+        }
+
         if let Some(quirk) = self.resolve_quirk() {
             return quirk.iot_api_supported;
         }
@@ -961,6 +982,20 @@ impl Device {
 
 #[cfg(test)]
 mod test {
+    #[test]
+    fn devices_can_be_listed_by_model_or_id() {
+        let listed = |list| is_listed_device(list, "H6159", "AA:BB:CC:DD:EE:FF:11:22");
+        assert!(listed("H6159"));
+        assert!(listed("h6003, h6159"));
+        assert!(listed("AA:BB:CC:DD:EE:FF:11:22"));
+        assert!(listed("aabbccddeeff1122"));
+        assert!(!listed(""));
+        assert!(!listed(",,"));
+        assert!(!listed("H615"));
+        assert!(!listed("H6003"));
+        assert!(!listed("AA:BB"));
+    }
+
     use crate::ble::{NotifyKettleBaseStatus, NotifyKettleHeatingState, NotifyKettleKeepWarm};
 
     #[test]

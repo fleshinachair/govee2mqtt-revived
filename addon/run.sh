@@ -135,6 +135,11 @@ if bashio::config.has_value disable_platform_mqtt ; then
   export GOVEE_DISABLE_PLATFORM_MQTT
 fi
 
+if bashio::config.has_value no_iot_control ; then
+  GOVEE_NO_IOT_CONTROL="$(bashio::config no_iot_control)"
+  export GOVEE_NO_IOT_CONTROL
+fi
+
 if bashio::config.has_value http_addr ; then
   HTTP_ADDR="$(bashio::config http_addr)"
   export HTTP_ADDR

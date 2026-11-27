@@ -166,6 +166,21 @@ minutes for cloud-only devices and is not always accurate. A device known only
 over the LAN is never marked unavailable. The Status sensor and the **Request
 Platform API State** button stay usable.
 
+## Lights that ignore commands
+
+Some older lights without LAN control accept commands sent over AWS IoT and do
+nothing. You can have chosen devices controlled through the Platform API
+instead, and keep your account for Tap-to-Run and room names.
+
+|ENV|App Config|Default|Purpose|
+|---|----------|-------|-------|
+|`GOVEE_NO_IOT_CONTROL=H6159,H6003`|`no_iot_control`|*(none)*|Models or device IDs, separated by commas, to control without AWS IoT|
+
+This needs the Platform API key. Commands to a listed device are slower and
+count against Govee's request limit. LAN control, where a device has it, is
+still used first. A few model-specific features, such as the H1270's separate
+lights, are only possible over AWS IoT and still use it.
+
 ## Effects (Scenes)
 
 By default Govee2MQTT publishes each light's full list of scene "effects" to

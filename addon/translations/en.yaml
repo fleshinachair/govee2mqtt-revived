@@ -21,6 +21,12 @@ configuration:
       Device events (ice maker full, water empty, presence) come from Govee's
       cloud over a separate connection, used only if you have such a device.
       Set to true to turn it off.
+  no_iot_control:
+    name: No AWS IoT Control
+    description: >-
+      Models (such as H6159) or device IDs, separated by commas, to control
+      without AWS IoT. Try it if a light without LAN control shows commands as
+      sent but does not react. Needs the API key.
   govee_email:
     name: Govee Account Email
     description: >-
