@@ -191,6 +191,9 @@ first discovery exits the process (upstream #76). Cloud discovery repeats every 
   Discovery configs are not retained, so a missed `online` leaves every entity
   `unavailable`.
 - Availability is not retained, so it is re-published every 60 s.
+- A device found after registration gets only its own configs published, by
+  `watch_for_late_devices`. Republishing everything would bring back entities
+  the user deleted.
 - With `GOVEE_OFFLINE_UNAVAILABLE=true`, device entities also depend on a
   retained `gv2mqtt/<id>/availability`.
 - The energy counter of a monitoring plug is saved in a retained

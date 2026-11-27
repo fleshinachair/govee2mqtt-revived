@@ -33,9 +33,18 @@ pub async fn enumerate_all_entites(state: &StateHandle) -> anyhow::Result<Entity
     enumerate_global_entities(state, &mut entities).await?;
     enumerate_scenes(state, &mut entities).await?;
 
-    let devices = state.devices().await;
+    enumerate_entities_for_devices(&state.devices().await, state, &mut entities).await;
 
-    for d in &devices {
+    Ok(entities)
+}
+
+/// Adds the entities of each device that can be enumerated
+pub async fn enumerate_entities_for_devices(
+    devices: &[ServiceDevice],
+    state: &StateHandle,
+    entities: &mut EntityList,
+) {
+    for d in devices {
         // Isolate one device's enumeration failure from the rest: a single
         // malformed capability (for example an empty `instance` name from
         // the Platform API, rejected by `instantiate_route`) must not take
@@ -51,8 +60,6 @@ pub async fn enumerate_all_entites(state: &StateHandle) -> anyhow::Result<Entity
             Err(err) => log::error!("Skipping entities for device {d}: {err:#}"),
         }
     }
-
-    Ok(entities)
 }
 
 async fn enumerate_global_entities(
@@ -168,7 +175,7 @@ pub async fn enumerate_entities_for_device(
     state: &StateHandle,
     entities: &mut EntityList,
 ) -> anyhow::Result<()> {
-    if !d.is_controllable() || d.is_ignored() {
+    if !d.is_announceable() {
         return Ok(());
     }
 

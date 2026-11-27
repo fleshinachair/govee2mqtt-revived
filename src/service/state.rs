@@ -18,7 +18,7 @@ use crate::undoc_api::{DeviceEntry, GoveeUndocumentedApi};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{
@@ -61,6 +61,9 @@ pub struct State {
     iot_client: Mutex<Option<IotClient>>,
     hass_client: Mutex<Option<HassClient>>,
     hass_discovery_prefix: Mutex<String>,
+    /// The devices that Home Assistant has been told about.
+    /// None until the first registration.
+    announced_device_ids: Mutex<Option<HashSet<String>>>,
     temperature_scale: Mutex<TemperatureScale>,
 }
 
@@ -271,6 +274,30 @@ impl State {
         }
 
         None
+    }
+
+    pub async fn note_announced_devices(&self, ids: impl IntoIterator<Item = String>) {
+        self.announced_device_ids
+            .lock()
+            .await
+            .get_or_insert_with(HashSet::new)
+            .extend(ids);
+    }
+
+    /// Devices that turned up after Home Assistant was told about the others.
+    /// Empty before the first registration, which covers all of them.
+    pub async fn unannounced_devices(&self) -> Vec<Device> {
+        let announced = self.announced_device_ids.lock().await;
+        let Some(announced) = announced.as_ref() else {
+            return vec![];
+        };
+        self.devices_by_id
+            .lock()
+            .await
+            .values()
+            .filter(|d| d.is_announceable() && !announced.contains(&d.id))
+            .cloned()
+            .collect()
     }
 
     pub async fn set_hass_client(&self, client: HassClient) {

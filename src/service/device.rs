@@ -1008,6 +1008,11 @@ impl Device {
         !matches!(self.is_ble_only_device(), Some(true))
     }
 
+    /// Whether this device gets any entities in Home Assistant
+    pub fn is_announceable(&self) -> bool {
+        self.is_controllable() && !self.is_ignored()
+    }
+
     pub fn local_segment_protocol(&self) -> Option<LocalSegmentProtocol> {
         self.resolve_quirk().and_then(|q| q.local_segment_protocol)
     }

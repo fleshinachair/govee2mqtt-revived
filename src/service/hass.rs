@@ -7,7 +7,9 @@ use crate::hass_mqtt::command_routes::{
     REQUEST_PLATFORM_DATA_ROUTE, SCENE_NEXT_ROUTE, SCENE_PREV_ROUTE, SET_MODE_SCENE_ROUTE,
     SET_MUSIC_PALETTE_ROUTE, SET_TEMPERATURE_ROUTE, SET_WORK_MODE_ROUTE, SWITCH_COMMAND_ROUTE,
 };
-use crate::hass_mqtt::enumerator::{enumerate_all_entites, enumerate_entities_for_device};
+use crate::hass_mqtt::enumerator::{
+    enumerate_all_entites, enumerate_entities_for_device, enumerate_entities_for_devices,
+};
 use crate::hass_mqtt::humidifier::{mqtt_device_set_work_mode, mqtt_humidifier_set_target};
 use crate::hass_mqtt::instance::EntityList;
 use crate::hass_mqtt::number::mqtt_number_command;
@@ -24,7 +26,7 @@ use async_channel::Receiver;
 use mosquitto_rs::router::{MakeDispatcher, MqttRouter, Params, Payload, State};
 use mosquitto_rs::{Client, Event, QoS};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
@@ -479,12 +481,52 @@ pub struct HassClient {
 
 impl HassClient {
     async fn register_with_hass(&self, state: &StateHandle) -> anyhow::Result<()> {
+        // Taken first: a device that appears while we work is picked up later
+        let known: Vec<String> = state
+            .devices()
+            .await
+            .into_iter()
+            .filter(|d| d.is_announceable())
+            .map(|d| d.id)
+            .collect();
         let entities = enumerate_all_entites(state).await?;
 
         // Register the configs
         log::trace!("register_with_hass: register entities");
         entities.publish_config(state, self).await?;
+        state.note_announced_devices(known).await;
 
+        self.finish_registration(state, &entities).await
+    }
+
+    /// Tells Home Assistant about devices that turned up after registration,
+    /// such as a light that was slow to answer LAN discovery. Only their own
+    /// configs are published, so that this doesn't bring back entities that
+    /// were deleted for other devices.
+    async fn register_late_devices(
+        &self,
+        state: &StateHandle,
+        devices: &[ServiceDevice],
+    ) -> anyhow::Result<()> {
+        for device in devices {
+            log::info!("Found {device} after startup; adding it to Home Assistant");
+        }
+        let mut entities = EntityList::new();
+        enumerate_entities_for_devices(devices, state, &mut entities).await;
+        entities.publish_config(state, self).await?;
+        state
+            .note_announced_devices(devices.iter().map(|d| d.id.clone()))
+            .await;
+
+        self.finish_registration(state, &entities).await
+    }
+
+    /// What follows the configs: availability, then the current state
+    async fn finish_registration(
+        &self,
+        state: &StateHandle,
+        entities: &EntityList,
+    ) -> anyhow::Result<()> {
         // Allow hass extra time to register the entities before
         // we mark them as available
         let delay = tokio::time::Duration::from_millis((10 * entities.len()) as u64);
@@ -1467,6 +1509,34 @@ async fn next_mqtt_event(
     Ok(event.ok())
 }
 
+/// A late device is announced once it has been seen twice, this far apart, so
+/// that the other sources have had a chance to describe it.
+const LATE_DEVICE_INTERVAL: Duration = Duration::from_secs(15);
+
+async fn watch_for_late_devices(state: StateHandle) {
+    let mut seen: HashSet<String> = HashSet::new();
+    loop {
+        tokio::time::sleep(LATE_DEVICE_INTERVAL).await;
+
+        let late = state.unannounced_devices().await;
+        let settled: Vec<_> = late
+            .iter()
+            .filter(|d| seen.contains(&d.id))
+            .cloned()
+            .collect();
+        seen = late.into_iter().map(|d| d.id).collect();
+
+        if settled.is_empty() {
+            continue;
+        }
+        if let Some(client) = state.get_hass_client().await {
+            if let Err(err) = client.register_late_devices(&state, &settled).await {
+                log::warn!("while adding a device to Home Assistant: {err:#}");
+            }
+        }
+    }
+}
+
 pub async fn spawn_hass_integration(
     state: StateHandle,
     args: &HassArguments,
@@ -1577,6 +1647,8 @@ pub async fn spawn_hass_integration(
             }
         });
     }
+
+    tokio::spawn(watch_for_late_devices(state.clone()));
 
     tokio::spawn(async move {
         let res = run_mqtt_loop(state, subscriber, client).await;
@@ -2647,5 +2719,148 @@ mod broker_tls_test {
         {
             assert_eq!(port(&[]), 1883);
         }
+    }
+}
+
+#[cfg(test)]
+mod late_device_test {
+    use super::*;
+    use crate::lan_api::LanDevice;
+    use crate::service::state::{SceneCatalogCache, State as ServiceState};
+    use std::io::{Read, Write};
+    use std::mem::ManuallyDrop;
+    use std::net::TcpListener;
+    use std::sync::{Arc, Mutex};
+
+    const EARLY_ID: &str = "AA:BB:CC:DD:EE:FF:00:01";
+    const LATE_ID: &str = "AA:BB:CC:DD:EE:FF:00:02";
+
+    type Topics = Arc<Mutex<Vec<String>>>;
+
+    /// Just enough of a broker to accept one client and note what it publishes
+    fn serve(listener: TcpListener, topics: Topics) -> std::io::Result<()> {
+        let (mut tcp, _) = listener.accept()?;
+        loop {
+            let mut header = [0u8; 1];
+            tcp.read_exact(&mut header)?;
+            let (mut length, mut shift) = (0usize, 0);
+            loop {
+                let mut byte = [0u8; 1];
+                tcp.read_exact(&mut byte)?;
+                length |= usize::from(byte[0] & 0x7f) << shift;
+                shift += 7;
+                if byte[0] & 0x80 == 0 {
+                    break;
+                }
+            }
+            let mut body = vec![0u8; length];
+            tcp.read_exact(&mut body)?;
+
+            match header[0] >> 4 {
+                // CONNECT
+                1 => tcp.write_all(&[0x20, 0x02, 0x00, 0x00])?,
+                // PUBLISH at QoS 0
+                3 => {
+                    let size = usize::from(u16::from_be_bytes([body[0], body[1]]));
+                    let topic = String::from_utf8_lossy(&body[2..2 + size]).to_string();
+                    topics.lock().unwrap().push(topic);
+                }
+                // PINGREQ
+                12 => tcp.write_all(&[0xd0, 0x00])?,
+                _ => {}
+            }
+        }
+    }
+
+    /// Everything published up to now
+    async fn drain(client: &HassClient, topics: &Topics) -> Vec<String> {
+        client.publish("test/done", "x").await.unwrap();
+        for _ in 0..500 {
+            {
+                let mut topics = topics.lock().unwrap();
+                if topics.iter().any(|t| t == "test/done") {
+                    return topics.drain(..).filter(|t| t != "test/done").collect();
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        panic!("the test broker did not receive the messages");
+    }
+
+    async fn add_light(state: &StateHandle, id: &str) {
+        let mut device = state.device_mut("H607C", id).await;
+        device.set_lan_device(LanDevice {
+            ip: std::net::Ipv4Addr::LOCALHOST.into(),
+            device: id.to_string(),
+            sku: "H607C".to_string(),
+            ble_version_hard: String::new(),
+            ble_version_soft: String::new(),
+            wifi_version_hard: String::new(),
+            wifi_version_soft: String::new(),
+        });
+        // An empty catalog, so that no scene list is fetched from Govee
+        device.set_scene_catalog(SceneCatalogCache {
+            platform_signature: None,
+            categories: vec![],
+        });
+    }
+
+    fn configs(topics: &[String]) -> Vec<&String> {
+        topics.iter().filter(|t| t.ends_with("/config")).collect()
+    }
+
+    #[tokio::test]
+    async fn a_light_found_after_registration_is_announced_on_its_own() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let topics = Topics::default();
+        let seen = topics.clone();
+        std::thread::spawn(move || serve(listener, seen));
+
+        // Never dropped: destroying a mosquitto client hangs on Windows GNU
+        // builds.
+        let mqtt = ManuallyDrop::new(
+            Client::with_id(&format!("g2m-{}", uuid::Uuid::new_v4().simple()), true).unwrap(),
+        );
+        mqtt.connect("127.0.0.1", port.into(), Duration::from_secs(60), None)
+            .await
+            .unwrap();
+        let client = HassClient {
+            client: Client::clone(&mqtt),
+        };
+
+        let state: StateHandle = Arc::new(ServiceState::new());
+        state
+            .set_hass_disco_prefix("homeassistant".to_string())
+            .await;
+        add_light(&state, EARLY_ID).await;
+        assert!(
+            state.unannounced_devices().await.is_empty(),
+            "nothing is late before the first registration"
+        );
+
+        client.register_with_hass(&state).await.unwrap();
+        let first = drain(&client, &topics).await;
+        assert!(configs(&first)
+            .iter()
+            .any(|t| t.contains("AABBCCDDEEFF0001")));
+        assert!(state.unannounced_devices().await.is_empty());
+
+        add_light(&state, LATE_ID).await;
+        let late = state.unannounced_devices().await;
+        assert_eq!(late.len(), 1);
+        assert_eq!(late[0].id, LATE_ID);
+
+        client.register_late_devices(&state, &late).await.unwrap();
+        let added = drain(&client, &topics).await;
+        let added_configs = configs(&added);
+        assert!(!added_configs.is_empty());
+        // Entities of other devices may have been deleted in Home Assistant
+        for topic in added_configs {
+            assert!(topic.contains("AABBCCDDEEFF0002"), "unexpected {topic}");
+        }
+        // Availability is not retained, so new entities need to hear it
+        assert!(added.contains(&availability_topic()));
+        assert!(state.unannounced_devices().await.is_empty());
     }
 }
