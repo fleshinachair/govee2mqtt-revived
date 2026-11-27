@@ -491,6 +491,15 @@ const GENERIC_SCENE_RULES: ScenePrefixRules = ScenePrefixRules {
 };
 
 const SCENE_PREFIX_RULES: &[ScenePrefixRules] = &[
+    // Every parameterised scene in this model's library is `sceneType` 6 and
+    // starts with 0x0a. The lamp wants those bytes as they are: with the
+    // generic 0x02 in front it plays a different animation. Scenes with no
+    // parameters keep the generic form, which was not tried without it.
+    ScenePrefixRules {
+        skus: &["H607C"],
+        line_prefix: 0xa3,
+        prefixes: &[(&[0x0a], &[0x0a]), (&[], &[0x02])],
+    },
     ScenePrefixRules {
         skus: &["H6022"],
         line_prefix: 0xa3,
@@ -1192,6 +1201,18 @@ a3 ff 00 01 ff ff 00 00 00 00 00 00 00 00 00 00 00 00 00 5d
     }
 
     /// H6022 has two rules; the one matching the actual prefix must win.
+    #[test]
+    fn scene_prefix_rules_h607c_keep_type_6_parameters_verbatim() {
+        let rules = ScenePrefixRules::for_sku("H607C");
+        // Start of the "Forest" parameters from the H607C scene library
+        assert_eq!(
+            rules.apply(vec![0x0a, 0x03, 0x2d, 0x00]),
+            vec![0x0a, 0x03, 0x2d, 0x00]
+        );
+        // A scene with no parameters still gets the generic prefix
+        assert_eq!(rules.apply(vec![]), vec![0x02]);
+    }
+
     #[test]
     fn scene_prefix_rules_h6022() {
         let rules = ScenePrefixRules::for_sku("H6022");
