@@ -48,6 +48,8 @@ start of the report and the latest replies, and were not reproduced.
 | Models added or read in the right unit: H604A, H600A, H61E6, H713C | [#136](https://github.com/wez/govee2mqtt/issues/136), [#191](https://github.com/wez/govee2mqtt/issues/191), [#307](https://github.com/wez/govee2mqtt/issues/307), [#515](https://github.com/wez/govee2mqtt/issues/515), [#740](https://github.com/wez/govee2mqtt/issues/740) |
 | TLS to the MQTT broker (new settings) | [#257](https://github.com/wez/govee2mqtt/issues/257) |
 | MQTT topics, now [documented](MQTT_TOPICS.md) | [#102](https://github.com/wez/govee2mqtt/issues/102) |
+| Deleted devices coming back (new setting to ignore them) | [#333](https://github.com/wez/govee2mqtt/issues/333), [#436](https://github.com/wez/govee2mqtt/issues/436), [#721](https://github.com/wez/govee2mqtt/issues/721) |
+| The web page inside Home Assistant, behind its sign-in | [#306](https://github.com/wez/govee2mqtt/issues/306) |
 
 Some of these are only *expected* to be fixed, because a change addresses the
 cause the report describes.
@@ -89,7 +91,6 @@ Govee gives no command for them.
 |---|---|
 | Wrong segment count, or segments that do not respond | [#473](https://github.com/wez/govee2mqtt/issues/473), [#543](https://github.com/wez/govee2mqtt/issues/543), [#545](https://github.com/wez/govee2mqtt/issues/545), [#701](https://github.com/wez/govee2mqtt/issues/701), [#710](https://github.com/wez/govee2mqtt/issues/710), [#728](https://github.com/wez/govee2mqtt/issues/728), [#733](https://github.com/wez/govee2mqtt/issues/733) |
 | Multi-outlet plugs appear as one switch | [#65](https://github.com/wez/govee2mqtt/issues/65), [#332](https://github.com/wez/govee2mqtt/issues/332), [#443](https://github.com/wez/govee2mqtt/issues/443) |
-| Deleted devices keep coming back | [#333](https://github.com/wez/govee2mqtt/issues/333), [#436](https://github.com/wez/govee2mqtt/issues/436), [#721](https://github.com/wez/govee2mqtt/issues/721) |
 | Tap-to-Run listed but does nothing useful | [#406](https://github.com/wez/govee2mqtt/issues/406), [#523](https://github.com/wez/govee2mqtt/issues/523), [#635](https://github.com/wez/govee2mqtt/issues/635) |
 | Govee refuses some scenes | [#582](https://github.com/wez/govee2mqtt/issues/582), [#596](https://github.com/wez/govee2mqtt/issues/596) |
 | H7105 tower fan has no controls | [#237](https://github.com/wez/govee2mqtt/issues/237), [#620](https://github.com/wez/govee2mqtt/issues/620) |
@@ -105,7 +106,6 @@ Govee gives no command for them.
 | A climate entity for heaters | [#166](https://github.com/wez/govee2mqtt/issues/166) |
 | Showing the new state before Govee confirms it | [#695](https://github.com/wez/govee2mqtt/issues/695) |
 | More than one Govee account | [#522](https://github.com/wez/govee2mqtt/issues/522) |
-| TLS or Home Assistant ingress for the web page | [#306](https://github.com/wez/govee2mqtt/issues/306) |
 
 ## Looked into, not fixed
 
@@ -113,7 +113,6 @@ Govee gives no command for them.
   bundled MQTT library (libmosquitto 2.0.9). Reading its code did not explain the
   reported trace, and it has not been reproduced. Restarting the add-on clears it.
 * [#567](https://github.com/wez/govee2mqtt/issues/567): the segment count for H61E5 is unchanged.
-* The add-on's web page link stays on port 8056 if you change `http_port`.
 
 ## Pull requests held back
 
