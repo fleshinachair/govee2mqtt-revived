@@ -15,6 +15,14 @@ cannot recover by itself, and relies on being restarted.
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
 
+## Not released yet
+
+* Light colour temperature is exchanged with Home Assistant in Kelvin, so limits
+  are exact (wez#731). **Needs Home Assistant 2025.2 or newer.**
+* 35 light models seen on the LAN in upstream reports are now in the model
+  table. Where those reports showed a 2700-6500 K range, it is used, which
+  should stop LAN-only setups sending values that leave a light dark (wez#742).
+
 ## New since the second pre-release
 
 A `transition` shorter than 2 seconds sent with a brightness delayed the change

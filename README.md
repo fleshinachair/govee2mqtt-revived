@@ -18,9 +18,11 @@ authors are credited in the commit history.
 > tests, but most changes have not been confirmed on real hardware by this
 > fork. Take a Home Assistant backup first, and please report what breaks in
 > [Issues](https://github.com/fleshinachair/govee2mqtt-revived/issues).
-> [What changed](RELEASE_NOTES.md) · [What to test](TESTING.md)
+> [What changed](RELEASE_NOTES.md) · [What to test](TESTING.md) · [What is not fixed](docs/STATUS.md)
 
 ## Quick Install
+
+Needs Home Assistant 2025.2 or newer.
 
 ### Home Assistant add-on (HAOS and Supervised)
 

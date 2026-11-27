@@ -15,7 +15,15 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: second pre-release published, waiting for its first real test
+## Status: third pre-release published; further changes not published
+
+`2026.11.27-6d5c4d04` was published on 2026-11-27. The owner ran the second
+pre-release first: three lights were found on the LAN and switched on and off.
+The third fixes short light transitions. Work after it is listed in
+`RELEASE_NOTES.md` under "Not released yet"; the published picture of what is
+and is not fixed is `docs/STATUS.md`.
+
+## Earlier status: second pre-release
 
 Published on 2026-11-26 as `2026.11.26-9d98b62e`: everything in the first
 pre-release (`2026.11.26-dd7edbbb`), the Phase 3 fixes ticked below, seven

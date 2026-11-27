@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Needs Home Assistant 2025.2 or newer
+- Light colour temperature limits are exact: 9000 K no longer shows as 9009 K
+- 35 more light models, 12 of them limited to 2700-6500 K
+
 ## Third pre-release
 
 - Short light transitions (under 2 seconds) apply at once instead of delaying

@@ -58,6 +58,12 @@ These are new since the first pre-release. The first one,
 | A switch that showed unknown | Switch it | Whether its state is now right |
 | A Govee login configured | Restart the add-on with the internet unplugged, then plug it back in | Whether it starts, and whether live updates return within about 10 minutes |
 
+Not released yet:
+
+| You have | Try | Tell us |
+|---|---|---|
+| Any light with colour temperature | Set the warmest and coolest values | Whether the limits and the light look right |
+
 ## Reporting
 
 Open an [issue](https://github.com/fleshinachair/govee2mqtt-revived/issues) with:
