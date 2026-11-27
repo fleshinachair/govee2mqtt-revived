@@ -69,8 +69,10 @@ and H60B0 rules are in `src/ble.rs`.
 - The H60B0 wraps them as `51`, a two-byte length, an `0a` block, then a second
   length-prefixed block. Dropping the first three bytes matched the cloud by eye
   on one scene. What the second block does is not known.
-- Not tried: the H6020 library is `sceneType` 5, starting `50`. H60B2, H7025,
-  H61E5 and H8057 are type 2, and H6009 type 1.
+- The H61E5 (`sceneType` 2, parameters starting `03`) showed no visible change
+  between the generic `02` and the cloud on one scene, so the generic form looks
+  right there. H60B2, H7025 and H8057 are the same type but were not tried.
+- Not tried: the H6020 (`sceneType` 5, starting `50`) and the H6009 (type 1).
 
 ## Devices
 
