@@ -186,12 +186,8 @@ first discovery exits the process (upstream #76). Cloud discovery repeats every 
 - `spawn_hass_integration` connects with `mosquitto-rs`; `run_mqtt_loop`
   dispatches commands and rebuilds subscriptions after reconnect.
 - `rebuild_router` registers command topics under `gv2mqtt/`, plus the HA status
-  topic `<discovery_prefix>/status`. Only `online` there re-enumerates entities.
+  topic `<discovery_prefix>/status`. Only `online` there re-registers entities.
 - Availability is not retained, so it is re-published every 60 s.
-- Discovery configs are not retained either, so the last registration is sent
-  again every 60 s, in case a restarted HA's `online` never arrives. The repeat
-  must not enumerate: that can sign in to Govee. Retained publishes that
-  automations react to, such as the scene catalog, must not repeat.
 - With `GOVEE_OFFLINE_UNAVAILABLE=true`, device entities also depend on a
   retained `gv2mqtt/<id>/availability`.
 - The energy counter of a monitoring plug is saved in a retained

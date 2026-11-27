@@ -291,16 +291,6 @@ async fn mqtt_device_dispatch_key(state: &StateHandle, topic: &str) -> Option<St
 /// takes to subscribe.
 const HASS_AVAILABILITY_INTERVAL: tokio::time::Duration = tokio::time::Duration::from_secs(60);
 
-/// How often we send hass everything about our entities again.
-///
-/// Our discovery configs are not retained, so a restarted hass only learns
-/// about us from the `online` status message it publishes. If that message
-/// does not reach us, every entity stays `unavailable` until we are
-/// restarted. Repeating the registration brings them back regardless.
-/// hass ignores a discovery config that has not changed.
-const HASS_REPEAT_REGISTRATION_INTERVAL: tokio::time::Duration =
-    tokio::time::Duration::from_secs(60);
-
 /// How long to wait after an unexpected disconnect for libmosquitto to
 /// reconnect. Its loop thread exits on errors it treats as fatal and then
 /// sends no further event, so we return an error, which ends the process
@@ -424,40 +414,12 @@ fn normalize_discovery_prefix(prefix: Option<&str>) -> String {
 #[derive(Clone)]
 pub struct HassClient {
     client: Client,
-    /// What we last registered, see HASS_REPEAT_REGISTRATION_INTERVAL
-    registered: Arc<tokio::sync::Mutex<EntityList>>,
 }
 
 impl HassClient {
-    fn new(client: Client) -> Self {
-        Self {
-            client,
-            registered: Default::default(),
-        }
-    }
-
     async fn register_with_hass(&self, state: &StateHandle) -> anyhow::Result<()> {
         let entities = enumerate_all_entites(state).await?;
-        *self.registered.lock().await = entities.clone();
-        self.announce(state, &entities, log::Level::Info).await
-    }
 
-    /// Send the last registration again. This deliberately does not enumerate
-    /// afresh: that can sign in to Govee, which must not happen on a timer.
-    async fn repeat_registration(&self, state: &StateHandle) -> anyhow::Result<()> {
-        let entities = self.registered.lock().await.clone();
-        if entities.len() == 0 {
-            return Ok(());
-        }
-        self.announce(state, &entities, log::Level::Debug).await
-    }
-
-    async fn announce(
-        &self,
-        state: &StateHandle,
-        entities: &EntityList,
-        level: log::Level,
-    ) -> anyhow::Result<()> {
         // Register the configs
         log::trace!("register_with_hass: register entities");
         entities.publish_config(state, self).await?;
@@ -465,8 +427,7 @@ impl HassClient {
         // Allow hass extra time to register the entities before
         // we mark them as available
         let delay = tokio::time::Duration::from_millis((10 * entities.len()) as u64);
-        log::log!(
-            level,
+        log::info!(
             "Wait {delay:?} for hass to settle on {} entity configs",
             entities.len()
         );
@@ -1489,7 +1450,11 @@ pub async fn spawn_hass_integration(
         .subscriber()
         .context("the mqtt subscriber was already taken")?;
 
-    state.set_hass_client(HassClient::new(client.clone())).await;
+    state
+        .set_hass_client(HassClient {
+            client: client.clone(),
+        })
+        .await;
 
     let disco_prefix = args.hass_discovery_prefix()?;
     state.set_hass_disco_prefix(disco_prefix).await;
@@ -1498,7 +1463,9 @@ pub async fn spawn_hass_integration(
     // subscribes to the availability topic after we published "online" still
     // learns that we are alive. See HASS_AVAILABILITY_INTERVAL.
     {
-        let hass_client = HassClient::new(client.clone());
+        let hass_client = HassClient {
+            client: client.clone(),
+        };
         tokio::spawn(async move {
             let mut warned = false;
             loop {
@@ -1518,31 +1485,6 @@ pub async fn spawn_hass_integration(
                     }
                     Err(err) => {
                         log::debug!("while re-asserting availability: {err:#}");
-                    }
-                }
-            }
-        });
-    }
-
-    // See HASS_REPEAT_REGISTRATION_INTERVAL
-    {
-        let state = state.clone();
-        tokio::spawn(async move {
-            let mut warned = false;
-            loop {
-                tokio::time::sleep(HASS_REPEAT_REGISTRATION_INTERVAL).await;
-
-                let Some(hass_client) = state.get_hass_client().await else {
-                    continue;
-                };
-                match hass_client.repeat_registration(&state).await {
-                    Ok(()) => warned = false,
-                    Err(err) if !warned => {
-                        log::warn!("while repeating the registration: {err:#}");
-                        warned = true;
-                    }
-                    Err(err) => {
-                        log::debug!("while repeating the registration: {err:#}");
                     }
                 }
             }
@@ -2373,9 +2315,9 @@ mod tests {
             .expect("registered music sensitivity route");
         // Never dropped: destroying a client cancels and joins its network
         // thread, which hangs with MinGW winpthreads on Windows.
-        let client = std::mem::ManuallyDrop::new(HassClient::new(
-            Client::with_auto_id().expect("mosquitto client"),
-        ));
+        let client = std::mem::ManuallyDrop::new(HassClient {
+            client: Client::with_auto_id().expect("mosquitto client"),
+        });
 
         assert!(state.devices().await.is_empty());
         tokio::time::timeout(Duration::from_secs(5), entity.notify_state(&client))
@@ -2412,121 +2354,6 @@ mod tests {
         let (tx, rx) = async_channel::unbounded::<Event>();
         drop(tx);
         assert!(matches!(next_mqtt_event(&rx, None).await, Ok(None)));
-    }
-}
-
-#[cfg(test)]
-mod repeat_registration_test {
-    use super::*;
-    use std::io::{Read, Write};
-    use std::sync::mpsc::{Receiver, Sender};
-
-    const MARKER: &str = "test/marker";
-
-    /// Just enough of a broker to record what one client publishes
-    fn serve(mut sock: std::net::TcpStream, published: Sender<(String, String)>) -> Option<()> {
-        let mut replies = sock.try_clone().ok()?;
-        let mut byte = || {
-            let mut b = [0u8];
-            sock.read_exact(&mut b).ok().map(|()| b[0])
-        };
-        loop {
-            let header = byte()?;
-            let (mut len, mut shift) = (0usize, 0);
-            loop {
-                let digit = byte()?;
-                len |= usize::from(digit & 0x7f) << shift;
-                shift += 7;
-                if digit & 0x80 == 0 {
-                    break;
-                }
-            }
-            let body: Vec<u8> = (0..len).map(|_| byte()).collect::<Option<_>>()?;
-            match header >> 4 {
-                // CONNECT
-                1 => replies.write_all(&[0x20, 2, 0, 0]).ok()?,
-                // PUBLISH
-                3 => {
-                    let end = 2 + usize::from(u16::from_be_bytes([body[0], body[1]]));
-                    let topic = String::from_utf8_lossy(&body[2..end]).into_owned();
-                    let qos = (header >> 1) & 3;
-                    if qos > 0 {
-                        replies
-                            .write_all(&[0x40, 2, body[end], body[end + 1]])
-                            .ok()?;
-                    }
-                    let payload = &body[end + if qos > 0 { 2 } else { 0 }..];
-                    let payload = String::from_utf8_lossy(payload).into_owned();
-                    published.send((topic, payload)).ok()?;
-                }
-                // PINGREQ
-                12 => replies.write_all(&[0xd0, 0]).ok()?,
-                _ => {}
-            }
-        }
-    }
-
-    /// Everything published since the previous call
-    async fn published(
-        client: &HassClient,
-        broker: &Receiver<(String, String)>,
-    ) -> Vec<(String, String)> {
-        client.publish(MARKER, "").await.expect("publish marker");
-        let mut seen = vec![];
-        loop {
-            let message = broker
-                .recv_timeout(Duration::from_secs(5))
-                .expect("the marker reaches the broker");
-            if message.0 == MARKER {
-                return seen;
-            }
-            seen.push(message);
-        }
-    }
-
-    /// A restarted hass whose `online` message never reaches us must still be
-    /// told about our entities. See HASS_REPEAT_REGISTRATION_INTERVAL.
-    #[tokio::test]
-    async fn the_registration_is_sent_again() {
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        let (tx, broker) = std::sync::mpsc::channel();
-        std::thread::spawn(move || serve(listener.accept().ok()?.0, tx));
-
-        // Never dropped: destroying a client cancels and joins its network
-        // thread, which hangs with MinGW winpthreads on Windows.
-        let client = std::mem::ManuallyDrop::new(HassClient::new(
-            Client::with_auto_id().expect("mosquitto client"),
-        ));
-        tokio::time::timeout(
-            Duration::from_secs(5),
-            client
-                .client
-                .connect("127.0.0.1", port.into(), Duration::from_secs(60), None),
-        )
-        .await
-        .expect("connect must not block")
-        .expect("connect");
-
-        let state: StateHandle = Arc::new(crate::service::state::State::new());
-        state
-            .set_hass_disco_prefix("homeassistant".to_string())
-            .await;
-
-        client.repeat_registration(&state).await.unwrap();
-        assert_eq!(
-            published(&client, &broker).await,
-            vec![],
-            "nothing to repeat before the first registration"
-        );
-
-        client.register_with_hass(&state).await.unwrap();
-        let first = published(&client, &broker).await;
-        assert!(first.iter().any(|(topic, _)| topic.ends_with("/config")));
-        assert!(first.contains(&(availability_topic(), "online".to_string())));
-
-        client.repeat_registration(&state).await.unwrap();
-        assert_eq!(published(&client, &broker).await, first);
     }
 }
 
