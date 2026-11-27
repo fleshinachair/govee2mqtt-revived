@@ -1,14 +1,15 @@
 use crate::hass_mqtt::base::{Device, EntityConfig, Origin};
-use crate::hass_mqtt::command_routes::{instantiate_route, SWITCH_COMMAND_ROUTE};
+use crate::hass_mqtt::command_routes::{instantiate_route, AUTO_STOP_ROUTE, SWITCH_COMMAND_ROUTE};
 use crate::hass_mqtt::instance::{publish_entity_config, EntityInstance};
 use crate::platform_api::DeviceCapability;
 use crate::service::device::Device as ServiceDevice;
 use crate::service::hass::{
     availability_topic, camel_case_to_space_separated, switch_instance_state_topic, topic_safe_id,
-    HassClient,
+    HassClient, IdParameter,
 };
 use crate::service::state::StateHandle;
 use async_trait::async_trait;
+use mosquitto_rs::router::{Params, Payload, State};
 use serde::Serialize;
 use serde_json::json;
 
@@ -171,6 +172,112 @@ impl EntityInstance for CapabilitySwitch {
     }
 }
 
+#[derive(Serialize, Clone, Debug)]
+pub struct AutoStopConfig {
+    #[serde(flatten)]
+    pub base: EntityConfig,
+    pub command_topic: crate::hass_mqtt::command_routes::CommandTopic,
+    pub state_topic: String,
+    /// Has hass retain its commands, so that the broker tells us the
+    /// setting again after we restart
+    pub retain: bool,
+}
+
+fn auto_stop_state_topic(device: &ServiceDevice) -> String {
+    format!("gv2mqtt/{id}/auto-stop/state", id = topic_safe_id(device))
+}
+
+fn on_off(on: bool) -> &'static str {
+    if on {
+        "ON"
+    } else {
+        "OFF"
+    }
+}
+
+/// Chooses whether a heater stops at its target temperature, see AUTO_STOP_FIELD
+pub struct AutoStopSwitch {
+    switch: AutoStopConfig,
+    device_id: String,
+    state: StateHandle,
+}
+
+impl AutoStopSwitch {
+    pub fn new(device: &ServiceDevice, state: &StateHandle) -> anyhow::Result<Self> {
+        let id = topic_safe_id(device);
+        Ok(Self {
+            switch: AutoStopConfig {
+                base: EntityConfig {
+                    availability_topic: availability_topic(),
+                    name: Some("Auto Stop".to_string()),
+                    device_class: None,
+                    origin: Origin::default(),
+                    device: Device::for_device(device),
+                    unique_id: format!("gv2mqtt-{id}-auto-stop"),
+                    entity_category: Some("config".to_string()),
+                    icon: Some("mdi:thermometer-off".to_string()),
+                },
+                command_topic: instantiate_route(AUTO_STOP_ROUTE, &[("id", &id)])?,
+                state_topic: auto_stop_state_topic(device),
+                retain: true,
+            },
+            device_id: device.id.to_string(),
+            state: state.clone(),
+        })
+    }
+}
+
+#[async_trait]
+impl EntityInstance for AutoStopSwitch {
+    async fn publish_config(&self, state: &StateHandle, client: &HassClient) -> anyhow::Result<()> {
+        publish_entity_config("switch", state, client, &self.switch.base, &self.switch).await
+    }
+
+    async fn notify_state(&self, client: &HassClient) -> anyhow::Result<()> {
+        let Some(device) = self.state.device_by_id(&self.device_id).await else {
+            log::warn!(
+                "Device {} not found in state, skipping notify",
+                self.device_id
+            );
+            return Ok(());
+        };
+
+        client
+            .publish(&self.switch.state_topic, on_off(device.auto_stop))
+            .await
+    }
+}
+
+/// Remembers the choice. Nothing is sent to the device until its target
+/// temperature is next set; this also runs when the broker replays the choice.
+pub async fn mqtt_set_auto_stop(
+    Payload(value): Payload<String>,
+    Params(IdParameter { id }): Params<IdParameter>,
+    State(state): State<StateHandle>,
+) -> anyhow::Result<()> {
+    let on = match value.as_str() {
+        "ON" => true,
+        "OFF" => false,
+        // The retained choice was cleared
+        "" => return Ok(()),
+        other => anyhow::bail!("unexpected auto stop setting {other:?}"),
+    };
+
+    // A choice kept for a device we no longer have must not bring it back
+    let Some(device) = state.resolve_device(&id).await else {
+        return Ok(());
+    };
+    state.device_mut(&device.sku, &device.id).await.auto_stop = on;
+
+    if let Some(client) = state.get_hass_client().await {
+        client
+            .publish(auto_stop_state_topic(&device), on_off(on))
+            .await?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -184,6 +291,40 @@ mod test {
 
     fn test_device() -> ServiceDevice {
         ServiceDevice::new(SKU, DEVICE_ID)
+    }
+
+    #[tokio::test]
+    async fn auto_stop_remembers_the_choice() -> anyhow::Result<()> {
+        let state: StateHandle = std::sync::Arc::new(crate::service::state::State::new());
+        {
+            let _device = state.device_mut(SKU, DEVICE_ID).await;
+        }
+
+        async fn send(state: &StateHandle, id: &str, value: &str) -> anyhow::Result<()> {
+            mqtt_set_auto_stop(
+                Payload(value.to_string()),
+                Params(IdParameter { id: id.to_string() }),
+                State(state.clone()),
+            )
+            .await
+        }
+        async fn stored(state: &StateHandle, id: &str) -> Option<bool> {
+            state.device_by_id(id).await.map(|d| d.auto_stop)
+        }
+
+        assert_eq!(stored(&state, DEVICE_ID).await, Some(false));
+        send(&state, DEVICE_ID, "ON").await?;
+        assert_eq!(stored(&state, DEVICE_ID).await, Some(true));
+        send(&state, DEVICE_ID, "").await?;
+        assert_eq!(stored(&state, DEVICE_ID).await, Some(true));
+        assert!(send(&state, DEVICE_ID, "maybe").await.is_err());
+        send(&state, DEVICE_ID, "OFF").await?;
+        assert_eq!(stored(&state, DEVICE_ID).await, Some(false));
+
+        let unknown = "11:22:33:44:55:66:77:88";
+        send(&state, unknown, "ON").await?;
+        assert_eq!(stored(&state, unknown).await, None);
+        Ok(())
     }
 
     fn power_switch_capability() -> DeviceCapability {

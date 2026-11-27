@@ -1133,7 +1133,7 @@ impl State {
             if let Some(info) = &device.http_device_info {
                 log::info!("Using Platform API to set {device} target temperature to {target}");
                 client
-                    .set_target_temperature(info, instance_name, target)
+                    .set_target_temperature(info, instance_name, target, device.auto_stop)
                     .await?;
                 return Ok(());
             }

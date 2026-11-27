@@ -109,6 +109,10 @@ pub struct Device {
     /// into music mode and power it on — an unacceptable side effect of moving
     /// a slider. So the value is held here and applied on the next style change.
     music_sensitivity: Option<u8>,
+
+    /// Whether to ask for auto stop along with a target temperature, as set
+    /// by the Auto Stop switch. A preference, not device state.
+    pub auto_stop: bool,
 }
 
 /// Tracks the energy counter of a plug with energy monitoring, so that

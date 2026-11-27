@@ -1,7 +1,7 @@
 use crate::hass_mqtt::base::{Device, EntityConfig, Origin};
 use crate::hass_mqtt::binary_sensor::{KettleOnBase, KettleOutOfWater};
 use crate::hass_mqtt::button::ButtonConfig;
-use crate::hass_mqtt::climate::TargetTemperatureEntity;
+use crate::hass_mqtt::climate::{TargetTemperatureEntity, AUTO_STOP_FIELD};
 use crate::hass_mqtt::event::EventConfig;
 use crate::hass_mqtt::fan::Fan;
 use crate::hass_mqtt::humidifier::Humidifier;
@@ -15,7 +15,7 @@ use crate::hass_mqtt::sensor::{
     KettleHeatingState, KettleKeepWarmRemaining, KettlePlacedOnBase, SceneInfoSensor,
     ENERGY_MONITORING_READINGS,
 };
-use crate::hass_mqtt::switch::CapabilitySwitch;
+use crate::hass_mqtt::switch::{AutoStopSwitch, CapabilitySwitch};
 use crate::hass_mqtt::work_mode::ParsedWorkMode;
 use crate::platform_api::{DeviceCapability, DeviceCapabilityKind, DeviceType};
 use crate::service::device::Device as ServiceDevice;
@@ -300,6 +300,9 @@ pub async fn enumerate_entities_for_device(
 
                 DeviceCapabilityKind::TemperatureSetting => {
                     entities.add(TargetTemperatureEntity::new(d, state, cap).await?);
+                    if cap.struct_field_by_name(AUTO_STOP_FIELD).is_some() {
+                        entities.add(AutoStopSwitch::new(d, state)?);
+                    }
                 }
 
                 // movieMode is not supported yet; don't warn about it

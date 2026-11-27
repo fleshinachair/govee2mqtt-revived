@@ -12,10 +12,43 @@ use crate::temperature::{
 use anyhow::anyhow;
 use mosquitto_rs::router::{Params, Payload, State};
 use serde::Deserialize;
+use serde_json::{json, Value as JsonValue};
 use std::str::FromStr;
 
 // TODO: register an actual climate entity.
 // I don't have one of these devices, so it is currently guesswork!
+
+/// The field of a temperature setting that makes a heater stop at the target
+/// instead of holding it. Govee takes it only along with a temperature, treats
+/// a command without it as "off", and doesn't report it back.
+pub const AUTO_STOP_FIELD: &str = "autoStop";
+
+/// The command value for a temperature setting
+pub fn target_temperature_value(
+    capability: &DeviceCapability,
+    celsius: f64,
+    auto_stop: bool,
+) -> JsonValue {
+    let mut value = json!({
+        "temperature": celsius,
+        "unit": "Celsius",
+    });
+
+    if auto_stop {
+        if let Some(field) = capability.struct_field_by_name(AUTO_STOP_FIELD) {
+            let on = match &field.field_type {
+                DeviceParameters::Enum { options } => options
+                    .iter()
+                    .find(|option| option.name == "Auto Stop")
+                    .map(|option| option.value.clone()),
+                _ => None,
+            };
+            value[AUTO_STOP_FIELD] = on.unwrap_or_else(|| json!(1));
+        }
+    }
+
+    value
+}
 
 pub struct TargetTemperatureEntity {
     number: NumberConfig,
@@ -255,6 +288,46 @@ mod test {
             alarm_type: None,
             event_state: None,
         }
+    }
+
+    /// wez/govee2mqtt#84 and wez/govee2mqtt#131
+    #[test]
+    fn auto_stop_is_sent_only_when_wanted_and_supported() {
+        let heater: DeviceCapability = serde_json::from_value(json!({
+            "type": "devices.capabilities.temperature_setting",
+            "instance": "targetTemperature",
+            "parameters": {
+                "dataType": "STRUCT",
+                "fields": [
+                    {
+                        "fieldName": "autoStop",
+                        "defaultValue": 0,
+                        "dataType": "ENUM",
+                        "options": [
+                            {"name": "Auto Stop", "value": 1},
+                            {"name": "Maintain", "value": 0}
+                        ],
+                        "required": false
+                    }
+                ]
+            }
+        }))
+        .expect("the heater capability must parse");
+
+        assert_eq!(
+            target_temperature_value(&heater, 20.0, true),
+            json!({"temperature": 20.0, "unit": "Celsius", "autoStop": 1})
+        );
+        // Off leaves the command as it has always been
+        assert_eq!(
+            target_temperature_value(&heater, 20.0, false),
+            json!({"temperature": 20.0, "unit": "Celsius"})
+        );
+        // A device without the field never gets it
+        assert_eq!(
+            target_temperature_value(&temperature_capability(), 20.0, true),
+            json!({"temperature": 20.0, "unit": "Celsius"})
+        );
     }
 
     /// `hass.rs` only subscribes to `SET_TEMPERATURE_ROUTE`. State defaults

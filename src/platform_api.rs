@@ -1,5 +1,5 @@
 use crate::cache::{cache_get, CacheComputeResult, CacheGetOptions};
-use crate::hass_mqtt::climate::parse_temperature_constraints;
+use crate::hass_mqtt::climate::{parse_temperature_constraints, target_temperature_value};
 use crate::opt_env_var;
 use crate::sensitive::{
     describe_json_error_with_policy, describe_request_url, describe_sensitive_body_with_policy,
@@ -538,6 +538,7 @@ impl GoveeApiClient {
         device: &HttpDeviceInfo,
         instance_name: &str,
         target: TemperatureValue,
+        auto_stop: bool,
     ) -> anyhow::Result<ControlDeviceResponseCapability> {
         let cap = device
             .capability_by_instance(instance_name)
@@ -556,10 +557,7 @@ impl GoveeApiClient {
             );
         }
 
-        let value = json!({
-            "temperature": celsius,
-            "unit": "Celsius",
-        });
+        let value = target_temperature_value(cap, celsius, auto_stop);
 
         self.control_device(device, cap, value).await
     }

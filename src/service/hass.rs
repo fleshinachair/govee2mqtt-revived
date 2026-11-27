@@ -1,6 +1,6 @@
 use crate::hass_mqtt::climate::mqtt_set_temperature;
 use crate::hass_mqtt::command_routes::{
-    device_id_segment, CommandTopic, ENERGY_COUNTER_ROUTE, FAN_COMMAND_ROUTE,
+    device_id_segment, CommandTopic, AUTO_STOP_ROUTE, ENERGY_COUNTER_ROUTE, FAN_COMMAND_ROUTE,
     FAN_SET_PERCENTAGE_ROUTE, HUMIDIFIER_SET_MODE_ROUTE, HUMIDIFIER_SET_TARGET_ROUTE,
     LIGHT_COMMAND_ROUTE, LIGHT_SEGMENT_COMMAND_ROUTE, MUSIC_SENSITIVITY_CLEAR_ROUTE,
     MUSIC_SENSITIVITY_COMMAND_ROUTE, NUMBER_COMMAND_ROUTE, ONECLICK_ROUTE, PURGE_CACHES_ROUTE,
@@ -90,6 +90,7 @@ macro_rules! mqtt_routes {
             FAN_SET_PERCENTAGE_ROUTE => crate::hass_mqtt::fan::mqtt_fan_set_percentage,
             FAN_COMMAND_ROUTE => crate::hass_mqtt::fan::mqtt_fan_command,
             ENERGY_COUNTER_ROUTE => mqtt_energy_counter,
+            AUTO_STOP_ROUTE => crate::hass_mqtt::switch::mqtt_set_auto_stop,
         }
     };
 }
@@ -1635,6 +1636,7 @@ mod tests {
             ("gv2mqtt/fan/:id/set-percentage", "mqtt_fan_set_percentage"),
             ("gv2mqtt/fan/:id/command", "mqtt_fan_command"),
             ("gv2mqtt/energy/:id/counter", "mqtt_energy_counter"),
+            ("gv2mqtt/:id/set-auto-stop", "mqtt_set_auto_stop"),
         ];
 
         assert_eq!(MQTT_ROUTE_PAIRINGS.len(), EXPECTED.len());

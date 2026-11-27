@@ -181,6 +181,14 @@ count against Govee's request limit. LAN control, where a device has it, is
 still used first. A few model-specific features, such as the H1270's separate
 lights, are only possible over AWS IoT and still use it.
 
+## Heaters and Auto Stop
+
+Govee switches a heater's Auto Stop off whenever its target temperature is set
+without it. A heater that has the option gets an **Auto Stop** switch. While it
+is on, setting the target temperature from Home Assistant asks for Auto Stop
+too. Flipping the switch sends nothing by itself, and it does not show what the
+Govee app is set to, as Govee does not report that.
+
 ## Effects (Scenes)
 
 By default Govee2MQTT publishes each light's full list of scene "effects" to
