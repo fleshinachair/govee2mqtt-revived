@@ -63,10 +63,14 @@ Not released yet:
 | You have | Try | Tell us |
 |---|---|---|
 | Any light with colour temperature | Set the warmest and coolest values | Whether the limits and the light look right |
+| Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
+| Tap-to-Run shortcuts | Run one | Whether it still works |
 
 ## Reporting
 
-Open an [issue](https://github.com/fleshinachair/govee2mqtt-revived/issues) with:
+From versions after the third pre-release, the web page's **Report a problem**
+does most of this for you. Otherwise open an
+[issue](https://github.com/fleshinachair/govee2mqtt-revived/issues) with:
 
 * The device model, such as `H6159`
 * The version from the add-on's **Info** tab

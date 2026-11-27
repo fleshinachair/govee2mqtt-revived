@@ -75,8 +75,13 @@ To go back, stop this app and start the old one.
 [What to test](https://github.com/fleshinachair/govee2mqtt-revived/blob/main/TESTING.md)
 lists what has not been tried on real hardware.
 
-Include your device model (such as H6159), the version shown on this app's
-**Info** tab, and the log. Check the log for personal details before posting.
+Open the app's web page (port 8056) and choose **Report a problem**. It builds a
+report without names, IDs or addresses, which you check, download and attach to
+a GitHub issue yourself. Nothing is sent automatically, and issues are public.
+
+If that is not possible, include your device model (such as H6159), the version
+shown on this app's **Info** tab, and the log. Check the log for personal
+details before posting.
 
 ## Credits
 

@@ -22,6 +22,13 @@ References such as `wez#739` are issues and pull requests in
 * 35 light models seen on the LAN in upstream reports are now in the model
   table. Where those reports showed a 2700-6500 K range, it is used, which
   should stop LAN-only setups sending values that leave a light dark (wez#742).
+* The web page has **Report a problem**: it builds a report without names, IDs
+  or addresses for you to check and attach to a GitHub issue. Nothing is sent
+  automatically.
+* When Govee says there are too many requests, status polling now pauses
+  instead of retrying every 30 seconds (wez#542).
+* One Tap-to-Run entry that cannot be read no longer hides the others, and one
+  with nothing that can be sent says so in the log.
 
 ## New since the second pre-release
 

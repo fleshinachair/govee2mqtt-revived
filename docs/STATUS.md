@@ -25,6 +25,8 @@ the reporter's hardware or account. If one of these is yours,
 | Sensor values shown as `{"value": 6}` | [#510](https://github.com/wez/govee2mqtt/issues/510), [#555](https://github.com/wez/govee2mqtt/issues/555) |
 | No native fan entity | [#87](https://github.com/wez/govee2mqtt/issues/87), [#262](https://github.com/wez/govee2mqtt/issues/262) |
 | Passwords from Docker secrets | [#362](https://github.com/wez/govee2mqtt/issues/362) |
+| Repeated requests after "too many requests" (not released yet) | [#542](https://github.com/wez/govee2mqtt/issues/542) |
+| DreamView entries causing errors or hiding Tap-to-Run | [#317](https://github.com/wez/govee2mqtt/issues/317), [#352](https://github.com/wez/govee2mqtt/issues/352), [#381](https://github.com/wez/govee2mqtt/issues/381) |
 
 Some of these are only *expected* to be fixed, because a change addresses the
 cause the report describes.
@@ -38,7 +40,7 @@ cause the report describes.
 | H6022 stops responding altogether with LAN control on | [#518](https://github.com/wez/govee2mqtt/issues/518) |
 | Air purifier readings missing | [#369](https://github.com/wez/govee2mqtt/issues/369), [#667](https://github.com/wez/govee2mqtt/issues/667) |
 | State does not update after a command | [#508](https://github.com/wez/govee2mqtt/issues/508) |
-| Slow cloud control and rate limits | [#542](https://github.com/wez/govee2mqtt/issues/542), [#623](https://github.com/wez/govee2mqtt/issues/623) |
+| Slow cloud control | [#623](https://github.com/wez/govee2mqtt/issues/623) |
 | Broker "not specified" or unavailable at boot | [#142](https://github.com/wez/govee2mqtt/issues/142), [#402](https://github.com/wez/govee2mqtt/issues/402), [#408](https://github.com/wez/govee2mqtt/issues/408), [#486](https://github.com/wez/govee2mqtt/issues/486), [#631](https://github.com/wez/govee2mqtt/issues/631) |
 | IoT connection problems | [#696](https://github.com/wez/govee2mqtt/issues/696) |
 
@@ -53,14 +55,14 @@ The model additions and the colour temperature change are not released yet.
 ## Reported more than once, still open
 
 Each row looks like one underlying problem. This is judged from the reports and
-has not been proven.
+has not been proven. DreamView actions in Tap-to-Run cannot be run, because
+Govee gives no command for them.
 
 | Problem | Issues |
 |---|---|
 | Wrong segment count, or segments that do not respond | [#473](https://github.com/wez/govee2mqtt/issues/473), [#543](https://github.com/wez/govee2mqtt/issues/543), [#545](https://github.com/wez/govee2mqtt/issues/545), [#701](https://github.com/wez/govee2mqtt/issues/701), [#710](https://github.com/wez/govee2mqtt/issues/710), [#728](https://github.com/wez/govee2mqtt/issues/728), [#733](https://github.com/wez/govee2mqtt/issues/733) |
 | Multi-outlet plugs appear as one switch | [#65](https://github.com/wez/govee2mqtt/issues/65), [#332](https://github.com/wez/govee2mqtt/issues/332), [#443](https://github.com/wez/govee2mqtt/issues/443) |
 | Deleted devices keep coming back | [#333](https://github.com/wez/govee2mqtt/issues/333), [#436](https://github.com/wez/govee2mqtt/issues/436), [#721](https://github.com/wez/govee2mqtt/issues/721) |
-| DreamView entries cause errors or hide Tap-to-Run | [#317](https://github.com/wez/govee2mqtt/issues/317), [#352](https://github.com/wez/govee2mqtt/issues/352), [#381](https://github.com/wez/govee2mqtt/issues/381) |
 | Tap-to-Run listed but does nothing useful | [#406](https://github.com/wez/govee2mqtt/issues/406), [#523](https://github.com/wez/govee2mqtt/issues/523), [#635](https://github.com/wez/govee2mqtt/issues/635) |
 | Govee refuses some scenes | [#582](https://github.com/wez/govee2mqtt/issues/582), [#596](https://github.com/wez/govee2mqtt/issues/596) |
 | H7105 tower fan has no controls | [#237](https://github.com/wez/govee2mqtt/issues/237), [#620](https://github.com/wez/govee2mqtt/issues/620) |

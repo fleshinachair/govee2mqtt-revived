@@ -165,6 +165,8 @@ first discovery exits the process (upstream #76). Cloud discovery repeats every 
 | `src/service/hass.rs` | Local MQTT client, command router, HA registration |
 | `src/service/iot.rs` | AWS IoT client and status subscriber |
 | `src/service/coordinator.rs` | Per-device serialization of control, follow-up poll |
+| `src/service/diagnostics.rs` | The sanitized "Report a problem" data. It ends up in public issues: add only approved items |
+| `src/service/poll_backoff.rs` | Pauses status polling after "too many requests" |
 | `src/service/http.rs`, `assets/` | HTTP API and web UI |
 | `src/hass_mqtt/` | One module per HA entity type, plus `enumerator.rs` |
 | `src/platform_api.rs` | Official Platform API client and schema types |
