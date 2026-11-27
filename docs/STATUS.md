@@ -16,20 +16,6 @@ start of the report and the latest replies, and were not reproduced.
 |---|---|
 | H607C scenes missing: they are listed and work on the owner's lamp | [#286](https://github.com/wez/govee2mqtt/issues/286) |
 
-## Can be worked on next
-
-Reading the code showed something missing here that could be changed without the
-device. Whether a change helps still needs someone who has it.
-
-| Problem | Issues |
-|---|---|
-| A light turned on with a brightness never powers on | [#521](https://github.com/wez/govee2mqtt/issues/521) |
-| No battery level for sensors | [#646](https://github.com/wez/govee2mqtt/issues/646), [#668](https://github.com/wez/govee2mqtt/issues/668) |
-| No setting for how often sensors are read | [#672](https://github.com/wez/govee2mqtt/issues/672) |
-| Model missing, or read in the wrong unit | [#136](https://github.com/wez/govee2mqtt/issues/136), [#191](https://github.com/wez/govee2mqtt/issues/191), [#307](https://github.com/wez/govee2mqtt/issues/307), [#515](https://github.com/wez/govee2mqtt/issues/515), [#740](https://github.com/wez/govee2mqtt/issues/740) |
-| No TLS to the MQTT broker | [#257](https://github.com/wez/govee2mqtt/issues/257) |
-| MQTT topics are not documented | [#102](https://github.com/wez/govee2mqtt/issues/102) |
-
 ## Fixed here, not confirmed
 
 | Area | Issues |
@@ -56,6 +42,12 @@ device. Whether a change helps still needs someone who has it.
 | Number sliders Home Assistant rejected | [#154](https://github.com/wez/govee2mqtt/issues/154), [#171](https://github.com/wez/govee2mqtt/issues/171) |
 | Older lights ignoring commands sent over AWS IoT (opt-in setting) | [#113](https://github.com/wez/govee2mqtt/issues/113), [#125](https://github.com/wez/govee2mqtt/issues/125), [#152](https://github.com/wez/govee2mqtt/issues/152), [#319](https://github.com/wez/govee2mqtt/issues/319), [#340](https://github.com/wez/govee2mqtt/issues/340), [#364](https://github.com/wez/govee2mqtt/issues/364) |
 | Heaters losing Auto Stop (a new switch) | [#84](https://github.com/wez/govee2mqtt/issues/84), [#131](https://github.com/wez/govee2mqtt/issues/131) |
+| H61C3 staying off when given a brightness or colour (the report there is about an H618C, which is unchanged) | [#521](https://github.com/wez/govee2mqtt/issues/521) |
+| Battery level for sensors (needs the Govee account) | [#646](https://github.com/wez/govee2mqtt/issues/646), [#668](https://github.com/wez/govee2mqtt/issues/668) |
+| How often sensors are read (new setting) | [#672](https://github.com/wez/govee2mqtt/issues/672) |
+| Models added or read in the right unit: H604A, H600A, H61E6, H713C | [#136](https://github.com/wez/govee2mqtt/issues/136), [#191](https://github.com/wez/govee2mqtt/issues/191), [#307](https://github.com/wez/govee2mqtt/issues/307), [#515](https://github.com/wez/govee2mqtt/issues/515), [#740](https://github.com/wez/govee2mqtt/issues/740) |
+| TLS to the MQTT broker (new settings) | [#257](https://github.com/wez/govee2mqtt/issues/257) |
+| MQTT topics, now [documented](MQTT_TOPICS.md) | [#102](https://github.com/wez/govee2mqtt/issues/102) |
 
 Some of these are only *expected* to be fixed, because a change addresses the
 cause the report describes.
