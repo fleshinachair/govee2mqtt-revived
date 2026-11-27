@@ -7,7 +7,7 @@ use crate::hass_mqtt::fan::Fan;
 use crate::hass_mqtt::humidifier::Humidifier;
 use crate::hass_mqtt::instance::EntityList;
 use crate::hass_mqtt::light::DeviceLight;
-use crate::hass_mqtt::number::{MusicSensitivityNumber, WorkModeNumber};
+use crate::hass_mqtt::number::{has_adjustable_range, MusicSensitivityNumber, WorkModeNumber};
 use crate::hass_mqtt::scene::SceneConfig;
 use crate::hass_mqtt::select::{SceneModeSelect, WorkModeSelect};
 use crate::hass_mqtt::sensor::{
@@ -144,7 +144,7 @@ async fn entities_for_work_mode(
                     }
                 }
             }
-        } else {
+        } else if has_adjustable_range(range.as_ref()) {
             let label = work_mode.label().to_string();
 
             entities.add(WorkModeNumber::new(

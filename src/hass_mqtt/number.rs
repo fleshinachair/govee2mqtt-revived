@@ -54,6 +54,19 @@ impl NumberConfig {
     }
 }
 
+/// Home Assistant rejects a number whose maximum is not above its minimum,
+/// and Govee describes some work modes with a single permitted value.
+pub fn has_adjustable_range(range: Option<&Range<i64>>) -> bool {
+    match range {
+        // `end` is exclusive
+        Some(range) => range
+            .start
+            .checked_add(1)
+            .is_some_and(|second| second < range.end),
+        None => true,
+    }
+}
+
 pub struct WorkModeNumber {
     number: NumberConfig,
     device_id: String,
@@ -115,6 +128,14 @@ impl WorkModeNumber {
             work_mode,
         })
     }
+
+    /// Home Assistant logs an error for a state outside the slider's range,
+    /// which some devices report for modes they are not using.
+    fn accepts(&self, value: i64) -> bool {
+        let min = self.number.min.unwrap_or(f32::MIN);
+        let max = self.number.max.unwrap_or(f32::MAX);
+        (min..=max).contains(&(value as f32))
+    }
 }
 
 #[async_trait]
@@ -145,7 +166,7 @@ impl EntityInstance for WorkModeNumber {
                     // read the current parameter for that mode
 
                     if let Some(value) = cap.state.pointer("/value/modeValue") {
-                        if let Some(n) = value.as_i64() {
+                        if let Some(n) = value.as_i64().filter(|n| self.accepts(*n)) {
                             client.publish(state_topic, n.to_string()).await?;
                             return Ok(());
                         }
@@ -156,7 +177,8 @@ impl EntityInstance for WorkModeNumber {
 
         if let Some(work_mode) = self.work_mode.as_i64() {
             // FIXME: assuming humidifier, rename that field?
-            if let Some(n) = device.humidifier_param_by_mode.get(&(work_mode as u8)) {
+            let stored = device.humidifier_param_by_mode.get(&(work_mode as u8));
+            if let Some(n) = stored.filter(|n| self.accepts(i64::from(**n))) {
                 client.publish(state_topic, n.to_string()).await?;
                 return Ok(());
             }
@@ -625,6 +647,36 @@ mod test {
             entity.number.command_topic.as_str(),
             format!("gv2mqtt/number/{id}/command/weirdmode/work-mode-was-not-int")
         );
+    }
+
+    /// wez/govee2mqtt#154: a mode with min and max both 80
+    #[test]
+    fn a_mode_with_a_single_value_has_no_slider() {
+        assert!(!has_adjustable_range(Some(&(80..81))));
+        assert!(!has_adjustable_range(Some(&(5..5))));
+        assert!(!has_adjustable_range(Some(&(i64::MAX..i64::MAX))));
+        assert!(has_adjustable_range(Some(&(40..81))));
+        assert!(has_adjustable_range(Some(&(1..3))));
+        assert!(has_adjustable_range(None));
+    }
+
+    /// wez/govee2mqtt#171: a reported 9 for a 40 to 80 slider
+    #[test]
+    fn a_state_outside_the_slider_range_is_not_published() {
+        let slider = WorkModeNumber::new(
+            &test_device(),
+            &empty_state(),
+            "Auto".to_string(),
+            "Auto",
+            serde_json::json!(3),
+            Some(40..81),
+        )
+        .expect("a well-formed work mode must build");
+
+        assert!(slider.accepts(40));
+        assert!(slider.accepts(80));
+        assert!(!slider.accepts(9));
+        assert!(!slider.accepts(81));
     }
 
     async fn state_with_device() -> StateHandle {
