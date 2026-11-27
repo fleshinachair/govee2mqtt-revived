@@ -190,7 +190,7 @@ Contributions to this fork:
   settings for six lights
   ([#3](https://github.com/fleshinachair/govee2mqtt-revived/pull/3)),
   [field notes](docs/FIELD_NOTES.md)
-  ([#4](https://github.com/fleshinachair/govee2mqtt-revived/pull/4)) and
+  ([#4](https://github.com/fleshinachair/govee2mqtt-revived/pull/4)),
   correct effects on the H607C and H60B0
   ([#5](https://github.com/fleshinachair/govee2mqtt-revived/pull/5)), and
   H60B2 music palettes
