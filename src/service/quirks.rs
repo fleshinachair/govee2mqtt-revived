@@ -271,6 +271,14 @@ fn load_quirks() -> HashMap<String, Quirk> {
         Quirk::light("H6006", BULB),
         Quirk::light("H600D", BULB),
         Quirk::light("H601B", BULB),
+        // DreamView G1 Pro: commands over the Platform API are sometimes lost.
+        // <https://github.com/wez/govee2mqtt/issues/740>
+        Quirk::light("H604A", TV_BACK),
+        // Not described by the Platform API, so without a quirk it has no type
+        // and gets no entities. <https://github.com/wez/govee2mqtt/issues/191>
+        Quirk::light("H600A", BULB),
+        // As above. <https://github.com/wez/govee2mqtt/issues/515>
+        Quirk::lan_api_capable_light("H61E6", STRIP),
         // <https://github.com/wez/govee2mqtt/issues/605>
         Quirk::lan_api_capable_light("H6039", WALL_SCONCE).with_color_temp_range(2700, 6500),
         // Not returned by the Platform API, so without a quirk it has no type
@@ -315,6 +323,11 @@ fn load_quirks() -> HashMap<String, Quirk> {
         Quirk::space_heater("H713A")
             .with_platform_temperature_sensor_units(TemperatureUnits::Fahrenheit),
         Quirk::space_heater("H713B")
+            .with_platform_temperature_sensor_units(TemperatureUnits::Fahrenheit),
+        // Reports Fahrenheit without saying so, like its siblings
+        // <https://github.com/wez/govee2mqtt/issues/136>
+        // <https://github.com/wez/govee2mqtt/issues/307>
+        Quirk::space_heater("H713C")
             .with_platform_temperature_sensor_units(TemperatureUnits::Fahrenheit),
         Quirk::space_heater("H7132")
             .with_platform_temperature_sensor_units(TemperatureUnits::Fahrenheit),
@@ -527,6 +540,24 @@ mod test {
             assert!(quirk.iot_api_supported, "{sku}");
             assert_eq!(quirk.lan_api_capable, lan, "{sku}");
         }
+    }
+
+    #[test]
+    fn more_reported_models_are_recognised() {
+        // wez/govee2mqtt#740, #191, #515
+        for (sku, lan) in [("H604A", false), ("H600A", false), ("H61E6", true)] {
+            let quirk = resolve_quirk(sku).expect("quirk");
+            assert_eq!(quirk.device_type, DeviceType::Light, "{sku}");
+            assert!(quirk.iot_api_supported, "{sku}");
+            assert_eq!(quirk.lan_api_capable, lan, "{sku}");
+        }
+        // wez/govee2mqtt#136, #307
+        let heater = resolve_quirk("H713C").expect("quirk");
+        assert_eq!(heater.device_type, DeviceType::Heater);
+        assert_eq!(
+            heater.platform_temperature_sensor_units,
+            Some(TemperatureUnits::Fahrenheit)
+        );
     }
 
     #[test]
