@@ -15,7 +15,12 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: twelfth pre-release
+## Status: thirteenth pre-release
+
+fleshinachair/govee2mqtt-revived#6: H60B2 music palette profiles. Only Bloom was
+re-checked on the lamp with the classic frames, sent by hand.
+
+## Earlier status: twelfth pre-release
 
 fleshinachair/govee2mqtt-revived#5 from Paulo Silveira: scene framing for the
 H607C and H60B0, found by sending hand-built frames to their lamps. The owner is

@@ -1,5 +1,12 @@
 # Changelog
 
+## Thirteenth pre-release
+
+- Music colour palettes on the H60B2: Bloom, Rhythm and Stippling (by Paulo
+  Silveira)
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Twelfth pre-release
 
 - H607C and H60B0: fixed effects playing something other than the one chosen,

@@ -192,7 +192,9 @@ Contributions to this fork:
   [field notes](docs/FIELD_NOTES.md)
   ([#4](https://github.com/fleshinachair/govee2mqtt-revived/pull/4)) and
   correct effects on the H607C and H60B0
-  ([#5](https://github.com/fleshinachair/govee2mqtt-revived/pull/5))
+  ([#5](https://github.com/fleshinachair/govee2mqtt-revived/pull/5)), and
+  H60B2 music palettes
+  ([#6](https://github.com/fleshinachair/govee2mqtt-revived/pull/6))
 
 Authors of open upstream pull requests applied here:
 

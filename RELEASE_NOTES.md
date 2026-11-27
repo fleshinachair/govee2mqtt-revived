@@ -1,4 +1,4 @@
-# Govee to MQTT (Revived): twelfth pre-release
+# Govee to MQTT (Revived): thirteenth pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
@@ -17,6 +17,16 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the twelfth pre-release
+
+* **Music colour palettes on the H60B2** floor lamp: Bloom, Rhythm and
+  Stippling, by [Paulo Silveira](https://github.com/peas)
+  ([#6](https://github.com/fleshinachair/govee2mqtt-revived/pull/6)). Needs the
+  [`music_palette`](docs/MUSIC_MODE.md) setting and LAN control. Paulo sent the
+  same data for Bloom to the lamp by hand and all three sections took the
+  colours; this build has not been tried on it, and Rhythm and Stippling were
+  not re-run.
 
 ## New since the eleventh pre-release
 

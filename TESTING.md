@@ -66,6 +66,12 @@ New in the fourth pre-release:
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 
+New in the thirteenth pre-release:
+
+| You have | Try | Tell us |
+|---|---|---|
+| H60B2 | With `music_palette` on, send Bloom, Rhythm and Stippling [palettes](docs/MUSIC_MODE.md) | Whether all three sections show your colours and react to sound |
+
 New in the twelfth pre-release. These need a setup **without** a Govee API key:
 
 | You have | Try | Tell us |

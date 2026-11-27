@@ -115,7 +115,9 @@ on these SKUs. The palette frames themselves have live runtime
 verification on H607C only (2- and 5-colour writes, confirmed by the
 device's IoT echo and `aa 05 13` read-back — see `proof/`); on H6020 and
 H60B0 they rely on the shared classic dialect and golden tests against
-the Python reference the styles were validated with.
+the Python reference the styles were validated with. On the H60B2 a Bloom
+palette sent as these frames lit all three sections; Rhythm and Stippling
+were not re-run that way.
 Some SKUs (e.g. H7025) use a different frame dialect with per-style
 trailing bytes and are intentionally not supported yet.
 
