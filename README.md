@@ -16,9 +16,31 @@ authors are credited in the commit history.
 
 > **Pre-release.** This is an early build for testers. It passes its automated
 > tests, but most changes have not been confirmed on real hardware by this
-> fork. Take a Home Assistant backup first, and please report what breaks in
-> [Issues](https://github.com/fleshinachair/govee2mqtt-revived/issues).
+> fork. Take a Home Assistant backup first, and please
+> [report what breaks](#something-not-working-report-it).
 > [What changed](RELEASE_NOTES.md) · [What to test](TESTING.md) · [What is not fixed](docs/STATUS.md)
+
+## Something not working? Report it
+
+**The bridge builds the bug report for you.** This fork has few devices to test
+on, so your report is how a problem with yours gets found and fixed.
+
+1. Open the bridge's web page: **Open web UI** on the add-on's page, or
+   `http://<address of the machine running it>:8056`.
+2. Choose **Report a problem**.
+3. Pick the device that has the problem, read the report, and download it.
+4. Choose **Open a GitHub issue**, attach the file, say what went wrong, and
+   submit. You need a GitHub account.
+
+Nothing is sent automatically. The report leaves out names, device IDs, network
+addresses and sign-in details. It does include device models, what they can do,
+and their latest readings, such as temperature or presence. Issues are public,
+so read it before you attach it.
+
+If the web page will not open,
+[open an issue](https://github.com/fleshinachair/govee2mqtt-revived/issues/new/choose)
+with your device model (such as H6159), the version, and the log. Check the log
+for personal details first.
 
 ## Quick Install
 
@@ -134,7 +156,7 @@ To go back, stop this add-on and start the old one.
 
 ## Have a question?
 
-* Found a problem? The web page on port 8056 has **Report a problem**
+* [Found a problem? Report it](#something-not-working-report-it)
 * [Is my device supported?](docs/SKUS.md)
 * [Check out the FAQ](docs/FAQ.md)
 * [LAN API troubleshooting](docs/LAN.md)
