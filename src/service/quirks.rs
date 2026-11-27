@@ -242,6 +242,7 @@ fn load_quirks() -> HashMap<String, Quirk> {
         // Color temperature is more restrictive than the fallback range
         // <https://github.com/wez/govee2mqtt/issues/511>
         Quirk::lan_api_capable_light("H6022", BULB).with_color_temp_range(2700, 6500),
+        Quirk::lan_api_capable_light("H6020", DESK).with_color_temp_range(2700, 6500),
         Quirk::lan_api_capable_light("H610A", STRIP),
         // At the time of writing, the metadata
         // returned by Govee is completely bogus for this
@@ -402,7 +403,8 @@ fn load_quirks() -> HashMap<String, Quirk> {
         Quirk::lan_api_capable_light("H6076", FLOOR_LAMP),
         Quirk::lan_api_capable_light("H6078", FLOOR_LAMP),
         Quirk::lan_api_capable_light("H6087", WALL_SCONCE),
-        Quirk::lan_api_capable_light("H60B0", FLOOR_LAMP),
+        Quirk::lan_api_capable_light("H60B0", FLOOR_LAMP).with_color_temp_range(2700, 6500),
+        Quirk::lan_api_capable_light("H60B2", FLOOR_LAMP).with_color_temp_range(2700, 6500),
         Quirk::lan_api_capable_light("H610A", STRIP),
         Quirk::lan_api_capable_light("H610B", STRIP),
         Quirk::lan_api_capable_light("H6117", STRIP),
@@ -431,6 +433,7 @@ fn load_quirks() -> HashMap<String, Quirk> {
         Quirk::lan_api_capable_light("H7012", STRING),
         Quirk::lan_api_capable_light("H7013", STRING),
         Quirk::lan_api_capable_light("H7021", STRING),
+        Quirk::lan_api_capable_light("H7025", STRING).with_color_temp_range(2700, 6500),
         Quirk::lan_api_capable_light("H7028", STRING),
         Quirk::lan_api_capable_light("H7041", STRING),
         Quirk::lan_api_capable_light("H7042", STRING),
@@ -450,6 +453,7 @@ fn load_quirks() -> HashMap<String, Quirk> {
         Quirk::lan_api_capable_light("H6052", DESK),
         Quirk::lan_api_capable_light("H6063", WALL_SCONCE),
         Quirk::lan_api_capable_light("H6079", FLOOR_LAMP),
+        Quirk::lan_api_capable_light("H607C", FLOOR_LAMP).with_color_temp_range(2200, 6500),
         Quirk::lan_api_capable_light("H6088", WALL_SCONCE),
         Quirk::lan_api_capable_light("H608D", STRING),
         Quirk::lan_api_capable_light("H60C1", CEILING).with_color_temp_range(2700, 6500),
@@ -474,6 +478,7 @@ fn load_quirks() -> HashMap<String, Quirk> {
         Quirk::lan_api_capable_light("H7053", OUTDOOR_LAMP),
         Quirk::lan_api_capable_light("H7057", FLOOD).with_color_temp_range(2700, 6500),
         Quirk::lan_api_capable_light("H7058", FLOOD).with_color_temp_range(2700, 6500),
+        Quirk::lan_api_capable_light("H8057", FLOOD).with_color_temp_range(2700, 6500),
         Quirk::lan_api_capable_light("H705E", OUTDOOR_LAMP).with_color_temp_range(2700, 6500),
         Quirk::lan_api_capable_light("H7066", SPOTLIGHT),
         Quirk::lan_api_capable_light("H7067", OUTDOOR_LAMP).with_color_temp_range(2700, 6500),
@@ -504,6 +509,24 @@ mod test {
         for sku in ["H60C1", "H61F5", "H705E"] {
             let range = resolve_quirk(sku).and_then(|q| q.color_temp_range);
             assert_eq!(range, Some((2700, 6500)), "{sku}");
+        }
+    }
+
+    #[test]
+    fn lights_confirmed_over_the_lan_carry_their_white_range() {
+        // Ranges are what the Platform API declares for each model, checked
+        // against daily LAN use on the real lights.
+        for (sku, range) in [
+            ("H6020", (2700, 6500)),
+            ("H607C", (2200, 6500)),
+            ("H60B0", (2700, 6500)),
+            ("H60B2", (2700, 6500)),
+            ("H7025", (2700, 6500)),
+            ("H8057", (2700, 6500)),
+        ] {
+            let quirk = resolve_quirk(sku);
+            assert_eq!(quirk.map(|q| q.lan_api_capable), Some(true), "{sku}");
+            assert_eq!(quirk.and_then(|q| q.color_temp_range), Some(range), "{sku}");
         }
     }
 
