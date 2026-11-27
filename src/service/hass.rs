@@ -845,6 +845,13 @@ pub fn transition_plan(duration: Duration) -> (usize, Duration) {
     (steps, interval)
 }
 
+/// Whether a transition is long enough to fade. A shorter one has room for a
+/// single step, which would only delay the change. Home Assistant can send
+/// fractions of a second with an ordinary turn-on.
+fn is_fade(duration: Duration) -> bool {
+    transition_plan(duration).0 > 1
+}
+
 /// Compute the brightness values to send for a ramp from `from` to `to`
 /// in `steps` linearly spaced increments.
 ///
@@ -941,7 +948,9 @@ async fn mqtt_light_command(
         // Stepped commands are only reasonable over the LAN; the cloud paths
         // are rate limited. A scene change opts out too.
         let ramp = match (transition, command.brightness, &command.effect) {
-            (Some(duration), Some(target), None) if device.lan_device.is_some() => {
+            (Some(duration), Some(target), None)
+                if is_fade(duration) && device.lan_device.is_some() =>
+            {
                 Some((duration, target))
             }
             _ => None,
@@ -985,9 +994,9 @@ async fn mqtt_light_command(
             return Ok(());
         }
         if transition.is_some() {
-            log::info!(
+            log::debug!(
                 "Ignoring transition for {device}: it needs LAN control, \
-                 a brightness, and no effect"
+                 a brightness, no effect, and at least 2 seconds"
             );
         }
 
@@ -2416,6 +2425,14 @@ mod transition_test {
         assert_eq!(steps, 1);
         let (steps, interval) = transition_plan(Duration::ZERO);
         assert_eq!((steps, interval), (1, Duration::ZERO));
+    }
+
+    #[test]
+    fn short_transitions_apply_immediately() {
+        assert!(!is_fade(Duration::from_millis(250)));
+        assert!(!is_fade(Duration::from_millis(1900)));
+        assert!(is_fade(Duration::from_secs(2)));
+        assert!(is_fade(Duration::from_secs(3600)));
     }
 
     #[test]
