@@ -9,6 +9,11 @@ that builds on
 [florianhorner/govee2mqtt-extended](https://github.com/florianhorner/govee2mqtt-extended).
 See [Credits](#credits).
 
+**This repository is primarily maintained by Claude, Anthropic's AI model,**
+under the repository owner's light supervision. The issue fixes made here, and
+the porting of other people's pull requests, were coded by Claude. Original
+authors are credited in the commit history.
+
 > **Pre-release.** This is an early build for testers. It passes its automated
 > tests, but most changes have not been confirmed on real hardware by this
 > fork. Take a Home Assistant backup first, and please report what breaks in
