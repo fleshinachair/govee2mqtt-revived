@@ -1,5 +1,15 @@
 # Changelog
 
+## Ninth pre-release
+
+- Purge Caches no longer signs you out of your Govee account, so two-step
+  verification does not ask for a new code (by Paulo Silveira)
+- Settings for H6020, H607C, H60B2, H7025, H8057 and H60B0. Their white range
+  is now narrower: check automations that set colour temperature
+- Known problem: on an H607C an effect may not match the one chosen
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Eighth pre-release
 
 - A light that is slow to answer at startup is now added to Home Assistant when

@@ -66,6 +66,14 @@ New in the fourth pre-release:
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 
+New in the ninth pre-release:
+
+| You have | Try | Tell us |
+|---|---|---|
+| A Govee account with 2FA | Press **Purge Caches**, then restart the add-on | Whether it starts without asking for a code |
+| H6020, H607C, H60B0, H60B2, H7025 or H8057 | Set the warmest and coolest white | Whether it stays lit, and whether the range looks right |
+| H607C | Choose several effects and compare with the Govee app | Which one you chose, and what the light showed |
+
 New in the eighth pre-release:
 
 | You have | Try | Tell us |

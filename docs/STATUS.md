@@ -14,7 +14,7 @@ start of the report and the latest replies, and were not reproduced.
 
 | Problem | Issues |
 |---|---|
-| H607C scenes missing: they are listed and work on the owner's lamp | [#286](https://github.com/wez/govee2mqtt/issues/286) |
+| H607C scenes missing: they are listed on the owner's lamp, though the owner reports that the effect shown may not match the one chosen | [#286](https://github.com/wez/govee2mqtt/issues/286) |
 
 ## Fixed here, not confirmed
 

@@ -15,7 +15,17 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: eighth pre-release
+## Status: ninth pre-release
+
+The first outside contribution: fleshinachair/govee2mqtt-revived#1 to #4, from
+Paulo Silveira, who offers to test on a real two-step verification account.
+
+Open: the owner reports that an effect chosen on their H607C does not match what
+the lamp shows. The names and scene codes come from one Govee list, and 89 of its
+104 entries are `sceneType` 6 with parameters starting `0a`. Whether this model
+needs different framing from the generic `02` prefix is untested.
+
+## Earlier status: eighth pre-release
 
 Adds devices found after startup to Home Assistant. The owner saw a light left
 unavailable on the seventh, which otherwise worked, and is to check the fix.

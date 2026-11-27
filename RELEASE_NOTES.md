@@ -1,4 +1,4 @@
-# Govee to MQTT (Revived): eighth pre-release
+# Govee to MQTT (Revived): ninth pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
@@ -16,6 +16,32 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the eighth pre-release
+
+The first two changes are by [Paulo Silveira](https://github.com/peas), who runs
+these lights every day.
+
+* **Purge Caches no longer signs you out of Govee.** With two-step verification,
+  pressing it could leave the bridge unable to start until you entered a new
+  code. If you change the account email, the bridge signs in again by itself.
+  Not yet tried on a real account with this build
+  ([#1](https://github.com/fleshinachair/govee2mqtt-revived/issues/1),
+  [#2](https://github.com/fleshinachair/govee2mqtt-revived/pull/2)).
+* **Settings for more lights:** H6020, H607C, H60B2, H7025 and H8057 are added,
+  and H60B0 gains its white range
+  ([#3](https://github.com/fleshinachair/govee2mqtt-revived/pull/3)). The white
+  range is 2200-6500 K on the H607C and 2700-6500 K on the others, so check any
+  automation that asks for a warmer or cooler white than that. These models can
+  now also be controlled over AWS IoT, with a Govee account, when they cannot be
+  reached on your network. The ranges for H60B0 and H60B2 agree with what other
+  users' devices reported to Govee; the rest rest on the contributor's lights.
+* **[Field notes](docs/FIELD_NOTES.md)** from the same contributor, for anyone
+  working on the bridge
+  ([#4](https://github.com/fleshinachair/govee2mqtt-revived/pull/4)).
+
+**Known problem:** on an H607C, choosing an effect may show something other than
+the one chosen. This is being looked into.
 
 ## New since the seventh pre-release
 
