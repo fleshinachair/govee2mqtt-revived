@@ -1,0 +1,40 @@
+name: Report with diagnostics
+description: Report a problem using the file from the "Report a problem" page.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **This issue will be public.** To get the diagnostics file, open the
+        add-on's web page and choose **Report a problem**. Read the report
+        before you attach it.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "ex: 2026.11.27-6d5c4d04"
+    validations:
+      required: true
+  - type: input
+    id: sku
+    attributes:
+      label: Govee device model
+      placeholder: "ex: H6072"
+  - type: textarea
+    id: description
+    attributes:
+      label: What happens, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics file
+      description: |
+        Click in this box, then drag in govee2mqtt-report.json.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log lines (optional)
+      description: |
+        Logs can contain device names and addresses. Remove anything private
+        before pasting.

@@ -129,6 +129,8 @@ fn setup_logger() {
             use chrono::Utc;
             use std::io::Write;
 
+            service::diagnostics::note_log(record.level(), record.module_path());
+
             let level_style = buf.default_level_style(record.level());
             write!(
                 buf,

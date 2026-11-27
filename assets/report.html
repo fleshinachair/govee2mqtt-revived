@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Report a problem</title>
+    <link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
+    <link href="/assets/bootstrap.min.css" rel="stylesheet" />
+    <link href="/assets/style.css" rel="stylesheet" />
+    <script type="module" src="/assets/color-modes.js"></script>
+    <script type="module" src="/assets/report.js"></script>
+  </head>
+  <body>
+    <main class="container py-4">
+      <p><a href="/assets/index.html">&larr; Back to devices</a></p>
+      <h1>Report a problem</h1>
+      <p>
+        Nothing is sent from this page. You check the report below, download it,
+        and attach it to an issue that you submit yourself with your own GitHub
+        account.
+      </p>
+      <div class="alert alert-warning">
+        <strong>Issues are public.</strong> Names, device IDs, network addresses
+        and sign-in details are left out, but please read the report before you
+        share it. It does include device models, what they can do, and their
+        latest readings, such as temperature or whether someone is present.
+      </div>
+
+      <h2 class="h5 mt-4">1. Choose the device with the problem</h2>
+      <select id="model" class="form-select mb-3" aria-label="Device model">
+        <option value="">Not about one device</option>
+      </select>
+
+      <h2 class="h5">2. Download the report</h2>
+      <p><a id="download" class="btn btn-secondary disabled">Download report</a></p>
+
+      <h2 class="h5">3. Open an issue and attach the file</h2>
+      <p>
+        <a
+          id="issue"
+          class="btn btn-primary"
+          href="https://github.com/fleshinachair/govee2mqtt-revived/issues/new?template=report.yml"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Open a GitHub issue</a
+        >
+      </p>
+
+      <h2 class="h5 mt-4">What the report contains</h2>
+      <pre id="report" class="border rounded p-3">Loading...</pre>
+    </main>
+  </body>
+</html>

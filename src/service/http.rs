@@ -11,6 +11,7 @@
 
 use crate::service::coordinator::Coordinator;
 use crate::service::device::{Device, DeviceState};
+use crate::service::diagnostics;
 use crate::service::state::StateHandle;
 use anyhow::Context;
 use axum::extract::{Path, State};
@@ -270,6 +271,11 @@ async fn activate_one_click(
     Ok(response_with_code(StatusCode::OK, "ok"))
 }
 
+/// The sanitized report shown on the "Report a problem" page
+async fn diagnostics_report(State(state): State<StateHandle>) -> Response {
+    Json(diagnostics::collect(&state).await).into_response()
+}
+
 async fn redirect_to_index() -> Response {
     axum::response::Redirect::to("/assets/index.html").into_response()
 }
@@ -277,6 +283,7 @@ async fn redirect_to_index() -> Response {
 fn build_router(state: StateHandle) -> Router {
     Router::new()
         .route("/api/devices", get(list_devices))
+        .route("/api/diagnostics", get(diagnostics_report))
         .route("/api/device/{id}/power/on", get(device_power_on))
         .route("/api/device/{id}/power/off", get(device_power_off))
         .route(
