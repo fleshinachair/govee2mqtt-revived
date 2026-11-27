@@ -20,6 +20,9 @@ mappings come from reading issue text and code, not from reproducing bugs.
 fleshinachair/govee2mqtt-revived#6: H60B2 music palette profiles. Only Bloom was
 re-checked on the lamp with the classic frames, sent by hand.
 
+On this build the owner reported effects working on their H607C (LAN only, no
+API key, Wi-Fi software 1.03.08), which confirms the twelfth's H607C fix.
+
 ## Earlier status: twelfth pre-release
 
 fleshinachair/govee2mqtt-revived#5 from Paulo Silveira: scene framing for the

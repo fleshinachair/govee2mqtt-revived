@@ -65,7 +65,8 @@ and H60B0 rules are in `src/ble.rs`.
 - How a scene's parameters must be framed depends on the model. A lamp can play
   a different animation, or ignore the upload, without any error.
 - The H607C wants parameters starting `0a` sent as they are. Its scenes with no
-  parameters work with the generic `02`.
+  parameters work with the generic `02`. Confirmed on this fork: the maintainer
+  reported effects working on a second H607C with `2026.11.27.1931`.
 - The H60B0 wraps them as `51`, a two-byte length, an `0a` block, then a second
   length-prefixed block. Dropping the first three bytes matched the cloud by eye
   on one scene. What the second block does is not known.
