@@ -792,6 +792,7 @@ async fn mqtt_request_platform_data(
 #[derive(Deserialize, Debug, Clone)]
 struct HassLightCommand {
     state: String,
+    /// Kelvin, because the light config sets `color_temp_kelvin`
     color_temp: Option<u32>,
     color: Option<DeviceColor>,
     effect: Option<String>,
@@ -976,7 +977,7 @@ async fn mqtt_light_command(
             }
             if let Some(color_temp) = command.color_temp {
                 state
-                    .device_set_color_temperature(&device, mired_to_kelvin(color_temp))
+                    .device_set_color_temperature(&device, color_temp)
                     .await
                     .context("mqtt_light_command: state.device_set_color_temperature")?;
             }
@@ -1030,7 +1031,7 @@ async fn mqtt_light_command(
         }
         if let Some(color_temp) = command.color_temp {
             state
-                .device_set_color_temperature(&device, mired_to_kelvin(color_temp))
+                .device_set_color_temperature(&device, color_temp)
                 .await
                 .context("mqtt_light_command: state.device_set_color_temperature")?;
             power_on = false;
@@ -1210,14 +1211,6 @@ async fn mqtt_switch_command(
     }
 
     Ok(())
-}
-
-pub fn mired_to_kelvin(mired: u32) -> u32 {
-    1000000u32.checked_div(mired).unwrap_or(0)
-}
-
-pub fn kelvin_to_mired(kelvin: u32) -> u32 {
-    1000000u32.checked_div(kelvin).unwrap_or(0)
 }
 
 /// HASS is advising us that its status has changed

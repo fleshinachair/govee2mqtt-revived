@@ -6,8 +6,7 @@ use crate::hass_mqtt::instance::{publish_entity_config, EntityInstance};
 use crate::platform_api::DeviceType;
 use crate::service::device::Device as ServiceDevice;
 use crate::service::hass::{
-    availability_topic, kelvin_to_mired, light_segment_state_topic, light_state_topic,
-    topic_safe_id, HassClient,
+    availability_topic, light_segment_state_topic, light_state_topic, topic_safe_id, HassClient,
 };
 use crate::service::state::StateHandle;
 use async_trait::async_trait;
@@ -42,10 +41,14 @@ pub struct LightConfig {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub effect_list: Vec<String>,
 
+    /// Colour temperatures are in Kelvin in commands and state. Mireds, HA's
+    /// default, cannot express most limits exactly: 9000 K came out as 9009 K.
+    /// Needs Home Assistant 2025.2.
+    pub color_temp_kelvin: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub min_mireds: Option<u32>,
+    pub min_kelvin: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_mireds: Option<u32>,
+    pub max_kelvin: Option<u32>,
 
     pub payload_available: String,
 }
@@ -106,7 +109,7 @@ impl EntityInstance for DeviceLight {
                             "state": "ON",
                             "color_mode": "color_temp",
                             "brightness": device_state.brightness,
-                            "color_temp": kelvin_to_mired(device_state.kelvin),
+                            "color_temp": device_state.kelvin,
                             "effect": device_state.scene,
                         })
                     }
@@ -208,13 +211,11 @@ impl DeviceLight {
             supported_color_modes.push("rgb".to_string());
         }
 
-        let (min_mireds, max_mireds) = if segment.is_some() {
+        let (min_kelvin, max_kelvin) = if segment.is_some() {
             (None, None)
         } else if let Some((min, max)) = device.get_color_temperature_range() {
             supported_color_modes.push("color_temp".to_string());
-            // Note that min and max are swapped by the translation
-            // from kelvin to mired
-            (Some(kelvin_to_mired(max)), Some(kelvin_to_mired(min)))
+            (Some(min), Some(max))
         } else {
             (None, None)
         };
@@ -268,8 +269,9 @@ impl DeviceLight {
                 effect,
                 effect_list,
                 payload_available: "online".to_string(),
-                max_mireds,
-                min_mireds,
+                color_temp_kelvin: true,
+                min_kelvin,
+                max_kelvin,
                 optimistic: segment.is_some(),
                 icon,
             },
@@ -365,8 +367,9 @@ mod test {
             icon: None,
             effect: false,
             effect_list: vec![],
-            min_mireds: None,
-            max_mireds: None,
+            color_temp_kelvin: true,
+            min_kelvin: None,
+            max_kelvin: None,
             payload_available: "online".to_string(),
         }
     }
@@ -441,5 +444,28 @@ mod test {
             segment.light.command_topic.as_str(),
             format!("gv2mqtt/light/{id}/command/3")
         );
+    }
+
+    /// Via mireds, a 9000 K limit reached Home Assistant as 9009 K
+    #[tokio::test]
+    async fn color_temperature_limits_are_published_in_kelvin() {
+        let device = ServiceDevice::new("H6062", DEVICE_ID);
+        let state: StateHandle = std::sync::Arc::new(crate::service::state::State::new());
+        state
+            .device_mut(&device.sku, &device.id)
+            .await
+            .set_scene_catalog(crate::service::state::SceneCatalogCache {
+                platform_signature: None,
+                categories: vec![],
+            });
+
+        let light = DeviceLight::for_device(&device, &state, None)
+            .await
+            .expect("a plain light must build");
+        let json = serde_json::to_value(&light.light).unwrap();
+
+        assert_eq!(json["color_temp_kelvin"], true);
+        assert_eq!(json["min_kelvin"], 2000);
+        assert_eq!(json["max_kelvin"], 9000);
     }
 }

@@ -4,6 +4,8 @@ version: "2026.11.27-6d5c4d04"
 slug: govee2mqtt_revived
 description: Control Govee Devices
 url: https://github.com/fleshinachair/govee2mqtt-revived
+# Lights send colour temperature in Kelvin
+homeassistant: "2025.2.0"
 arch:
   - amd64
   - aarch64
