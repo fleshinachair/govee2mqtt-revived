@@ -141,6 +141,13 @@ To go back, stop this add-on and start the old one.
 
 This is a community fork, and most of the work in it was done by others.
 
+This fork:
+
+* **[fleshinachair](https://github.com/fleshinachair)** runs it and supervises the work
+* **Claude**, Anthropic's AI model, primarily maintains it
+
+Building on:
+
 * **[Wez Furlong](https://github.com/wez)** created
   [govee2mqtt](https://github.com/wez/govee2mqtt) and wrote the bridge itself.
   It is released under the [MIT license](LICENSE.md).
@@ -180,11 +187,23 @@ Authors of open upstream pull requests applied here:
 * [carloscae](https://github.com/carloscae): re-registration handling
   ([#711](https://github.com/wez/govee2mqtt/pull/711))
 * [snoack](https://github.com/snoack): Offline status
-  ([#718](https://github.com/wez/govee2mqtt/pull/718))
+  ([#718](https://github.com/wez/govee2mqtt/pull/718)) and H5086 energy monitoring ([#717](https://github.com/wez/govee2mqtt/pull/717))
 * [jj33](https://github.com/jj33): air quality monitors
   ([#648](https://github.com/wez/govee2mqtt/pull/648))
 * [fpedrei](https://github.com/fpedrei): web listen address
   ([#697](https://github.com/wez/govee2mqtt/pull/697))
+* [jacobhausler](https://github.com/jacobhausler): light transitions
+  ([#726](https://github.com/wez/govee2mqtt/pull/726))
+* [ggiesen](https://github.com/ggiesen): device events
+  ([#693](https://github.com/wez/govee2mqtt/pull/693))
+* [pixelowaty](https://github.com/pixelowaty): local segment control on H6061 and H6066
+  ([#752](https://github.com/wez/govee2mqtt/pull/752))
+* [DaveBKC](https://github.com/DaveBKC): kettle sensors
+  ([#734](https://github.com/wez/govee2mqtt/pull/734))
+* [danieldubrovski](https://github.com/danieldubrovski): H1270 main and halo lights
+  ([#715](https://github.com/wez/govee2mqtt/pull/715))
+* [kencarsick](https://github.com/kencarsick): H6098 video mode
+  ([#690](https://github.com/wez/govee2mqtt/pull/690))
 
 Others whose work arrived through `govee2mqtt-extended`:
 
