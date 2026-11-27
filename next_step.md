@@ -15,12 +15,18 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Status: fifth pre-release
+## Status: sixth pre-release
+
+Every open upstream issue is sorted in `docs/STATUS.md`. The sixth carries all
+the work that could be done without the device; none of it is confirmed on
+hardware. What is left there needs someone with the device or account.
+
+## Earlier status: fifth pre-release
 
 The fifth changes only how releases are numbered, to `YYYY.MM.DD.HHMM`. Home
 Assistant did not offer the fourth to someone on the third, as both were made on
-the same day and it does not order the commit hash. Check that the fifth is
-offered to the owner.
+the same day and it does not order the commit hash. The owner confirmed the
+fifth works.
 
 Prepared on 2026-11-27. The owner ran the third pre-release,
 `2026.11.27-6d5c4d04`: after a Home Assistant restart every light stayed

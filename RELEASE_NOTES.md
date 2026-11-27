@@ -1,4 +1,4 @@
-# Govee to MQTT (Revived): fifth pre-release
+# Govee to MQTT (Revived): sixth pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
@@ -16,6 +16,44 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the fifth pre-release
+
+All 324 open issues in wez/govee2mqtt have been sorted into
+[what is and is not fixed](docs/STATUS.md), and the ones that could be worked
+on without the device have been. **None of the changes below has been tried on
+the hardware it is for.** Each new setting is off until you set it.
+
+### Fixes
+
+| Problem | Upstream |
+|---|---|
+| Home Assistant rejects a number slider, or the value shown on it | wez#154, wez#171 |
+| An H61C3 stays off when given a brightness, colour or effect | wez#521 (reported there for an H618C, which is unchanged) |
+| H713C temperatures read in the wrong unit | wez#136, wez#307 |
+| H600A and H61E6 get no controls | wez#191, wez#515 |
+
+### Changes for your device
+
+* **Older lights that accept commands and ignore them:** the new setting
+  `no_iot_control` takes models or device IDs to control without AWS IoT. Needs
+  the API key (wez#113, wez#125, wez#152, wez#319, wez#340, wez#364).
+* **Heaters:** a new **Auto Stop** switch. While it is on, setting the target
+  temperature from Home Assistant asks for Auto Stop too. It does not show
+  what the Govee app is set to, as Govee does not report that (wez#84,
+  wez#131).
+* **H604A** now uses AWS IoT, as commands sent the other way were sometimes
+  lost. If it gets worse, add `H604A` to `no_iot_control` (wez#740).
+
+### Features
+
+* A **Battery** sensor for devices whose Govee account entry has a level
+  (wez#646, wez#668).
+* `sensor_poll_interval` sets how often sensors are read, from 60 to 900
+  seconds (wez#672).
+* `mqtt_tls` and `mqtt_ca` connect to your MQTT broker over TLS. Tested against
+  a simulated broker, not a real one. No client certificates (wez#257).
+* The [MQTT topics](docs/MQTT_TOPICS.md) are documented (wez#102).
 
 ## New since the fourth pre-release
 
@@ -37,7 +75,7 @@ greyed out **Update**. The features are the same as the fourth.
   should stop LAN-only setups sending values that leave a light dark (wez#742).
 * The web page has **Report a problem**: it builds a report without names, IDs
   or addresses for you to check and attach to a GitHub issue. Nothing is sent
-  automatically. It has not been tried in a real browser.
+  automatically.
 * When Govee says there are too many requests, status polling now pauses
   instead of retrying every 30 seconds (wez#542).
 * One Tap-to-Run entry that cannot be read no longer hides the others, and one

@@ -1,5 +1,19 @@
 # Changelog
 
+## Sixth pre-release
+
+None of this has been tried on the hardware it is for.
+
+- Number sliders Home Assistant rejected are fixed
+- New setting no_iot_control, for older lights that ignore commands
+- Auto Stop switch for heaters
+- H61C3 is switched on when given a brightness, colour or effect
+- Models H600A, H61E6 and H713C added; H604A now uses AWS IoT
+- Battery sensor for devices that report a level (needs the Govee account)
+- New settings sensor_poll_interval, mqtt_tls and mqtt_ca
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Fifth pre-release
 
 - Version numbers are now date and time, so that Home Assistant offers updates

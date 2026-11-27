@@ -66,6 +66,18 @@ New in the fourth pre-release:
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 
+New in the sixth pre-release:
+
+| You have | Try | Tell us |
+|---|---|---|
+| A light that shows commands as sent but does not react | Add its model to `no_iot_control` (needs the API key) | Whether it now responds |
+| A heater with Auto Stop | Turn on the **Auto Stop** switch, set the target temperature | Whether the Govee app shows Auto Stop on |
+| H61C3 | While it is off, turn it on with a brightness | Whether it lights up |
+| H604A | Switch it on and off many times | Whether any command is lost |
+| H600A, H61E6 or H713C | Use it | Whether the controls and readings work |
+| A battery sensor and a Govee account | Compare the **Battery** sensor with the app | Whether they match, and whether it changes over days |
+| A broker with TLS | Set `mqtt_tls` or `mqtt_ca`, with host and port | Whether it connects |
+
 ## Reporting
 
 From the fourth pre-release, the web page's **Report a problem**
