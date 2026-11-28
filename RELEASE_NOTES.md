@@ -9,8 +9,8 @@ two-step verification. Reported back on recent builds: effects work on an H607C
 over the LAN; the web page matches the Home Assistant theme; Rhythm and Stippling
 palettes work on an H60B2; **Unavailable When Offline** marked offline H601C
 lights unavailable (the way back is untested); moving from wez's add-on kept all
-121 entities on one setup (on the tenth pre-release); and it runs on a
-Raspberry Pi.
+121 entities on one setup (on the tenth pre-release); and on a Raspberry Pi it
+runs and every Tap-to-Run shortcut works, with a real Govee account.
 Take a Home Assistant backup first. Moving from wez's add-on: see
 [the migration steps](README.md#migrating-from-wezgovee2mqtt-zero-entity-loss).
 What to try, and how to report it: [TESTING.md](TESTING.md).

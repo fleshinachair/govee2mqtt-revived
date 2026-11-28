@@ -53,7 +53,8 @@ Reported by others since (2026-11-27): Paulo confirmed Rhythm and Stippling on
 the H60B2 and found no working form for H6020 LAN scenes; a reporter on
 wez/govee2mqtt#551 confirmed `offline_unavailable` going unavailable (return not
 yet tested) and a 121-entity migration; another on wez/govee2mqtt#737 runs it on
-a Raspberry Pi (Tap-to-Run not mentioned).
+a Raspberry Pi, and later (2026-11-28) that every Tap-to-Run shortcut works
+after purging the cache.
 
 ## Earlier status: twelfth pre-release
 

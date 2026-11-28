@@ -15,6 +15,7 @@ start of the report and the latest replies, and were not reproduced.
 | Problem | Issues |
 |---|---|
 | H607C scenes missing: they are listed on the owner's lamp, and a separate fault found later, where the wrong effect played, is fixed there too | [#286](https://github.com/wez/govee2mqtt/issues/286) |
+| Tap-to-Run shortcuts not working: a reporter on a Raspberry Pi saw every one work after pressing Purge Caches | [#737](https://github.com/wez/govee2mqtt/issues/737) |
 | Offline lights still shown as on (opt-in `offline_unavailable`): a reporter saw seven H601C become unavailable. Becoming available again is not yet tested | [#551](https://github.com/wez/govee2mqtt/issues/551) |
 
 ## Fixed here, not confirmed
@@ -22,7 +23,7 @@ start of the report and the latest replies, and were not reproduced.
 | Area | Issues |
 |---|---|
 | Startup crashes and outages | [#76](https://github.com/wez/govee2mqtt/issues/76), [#536](https://github.com/wez/govee2mqtt/issues/536), [#538](https://github.com/wez/govee2mqtt/issues/538), [#549](https://github.com/wez/govee2mqtt/issues/549), [#565](https://github.com/wez/govee2mqtt/issues/565), [#578](https://github.com/wez/govee2mqtt/issues/578), [#617](https://github.com/wez/govee2mqtt/issues/617), [#618](https://github.com/wez/govee2mqtt/issues/618), [#732](https://github.com/wez/govee2mqtt/issues/732) |
-| Login, two-step verification, Tap-to-Run | [#627](https://github.com/wez/govee2mqtt/issues/627), [#633](https://github.com/wez/govee2mqtt/issues/633), [#647](https://github.com/wez/govee2mqtt/issues/647), [#682](https://github.com/wez/govee2mqtt/issues/682), [#702](https://github.com/wez/govee2mqtt/issues/702), [#737](https://github.com/wez/govee2mqtt/issues/737), [#745](https://github.com/wez/govee2mqtt/issues/745) |
+| Login, two-step verification, Tap-to-Run | [#627](https://github.com/wez/govee2mqtt/issues/627), [#633](https://github.com/wez/govee2mqtt/issues/633), [#647](https://github.com/wez/govee2mqtt/issues/647), [#682](https://github.com/wez/govee2mqtt/issues/682), [#702](https://github.com/wez/govee2mqtt/issues/702), [#745](https://github.com/wez/govee2mqtt/issues/745) |
 | Scenes and effects | [#666](https://github.com/wez/govee2mqtt/issues/666), [#722](https://github.com/wez/govee2mqtt/issues/722) |
 | MQTT and availability | [#110](https://github.com/wez/govee2mqtt/issues/110), [#227](https://github.com/wez/govee2mqtt/issues/227), [#572](https://github.com/wez/govee2mqtt/issues/572), [#659](https://github.com/wez/govee2mqtt/issues/659), [#661](https://github.com/wez/govee2mqtt/issues/661), [#686](https://github.com/wez/govee2mqtt/issues/686), [#712](https://github.com/wez/govee2mqtt/issues/712), [#719](https://github.com/wez/govee2mqtt/issues/719) |
 | Offline devices (opt-in setting) | [#465](https://github.com/wez/govee2mqtt/issues/465), [#509](https://github.com/wez/govee2mqtt/issues/509), [#563](https://github.com/wez/govee2mqtt/issues/563), [#359](https://github.com/wez/govee2mqtt/issues/359), [#387](https://github.com/wez/govee2mqtt/issues/387) |
