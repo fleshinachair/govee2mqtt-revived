@@ -88,6 +88,12 @@ fn classify_login_status(body_bytes: &[u8]) -> Option<u64> {
         .and_then(|v| v.get("status").and_then(|s| s.as_u64()))
 }
 
+/// Govee can refuse a token with HTTP 200 and `{"status": 401}` in the body,
+/// for example after the account password was changed.
+fn rejects_the_token(reply: &JsonValue) -> bool {
+    reply.get("status").and_then(JsonValue::as_u64) == Some(401)
+}
+
 /// Trim whitespace from a pasted 2FA code and treat an empty value as unset.
 fn normalize_2fa_code(raw: Option<String>) -> Option<String> {
     raw.and_then(|s| {
@@ -1056,6 +1062,12 @@ impl GoveeUndocumentedApi {
         }
 
         let raw: JsonValue = http_response_body(response).await?;
+        if rejects_the_token(&raw) {
+            self.invalidate_account_login();
+            anyhow::bail!(
+                "Govee rejected the saved sign-in. It has been discarded,                  and the next attempt will sign in again"
+            );
+        }
         // Fail here rather than save a reply that cannot be used later
         parse_device_list(&raw)?;
         Ok(raw)
@@ -1756,6 +1768,19 @@ fn embedded_json_with_policy<'de, T: DeserializeOwned, D: serde::de::Deserialize
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn a_refused_token_is_recognised_in_the_reply_body() {
+        let refused = serde_json::json!({"status": 401, "message": "token is invalid"});
+        assert!(rejects_the_token(&refused));
+        for other in [
+            serde_json::json!({"status": 200, "devices": []}),
+            serde_json::json!({"message": "no status"}),
+            serde_json::json!([401]),
+        ] {
+            assert!(!rejects_the_token(&other), "{other}");
+        }
+    }
     use crate::platform_api::from_json;
     use std::io::{Read, Write};
     use std::net::TcpListener;
