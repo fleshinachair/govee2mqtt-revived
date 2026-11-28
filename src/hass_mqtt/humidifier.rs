@@ -270,7 +270,11 @@ pub async fn mqtt_humidifier_set_target(
 
     let device = state.resolve_device_for_control(&id).await?;
 
-    let use_iot = device.pollable_via_iot() && state.get_iot_client().await.is_some();
+    let use_iot = device.pollable_via_iot()
+        && state
+            .get_iot_client()
+            .await
+            .is_some_and(|iot| iot.is_connected());
 
     if !use_iot {
         if let Some(info) = &device.http_device_info {

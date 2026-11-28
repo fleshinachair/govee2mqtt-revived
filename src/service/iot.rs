@@ -10,15 +10,38 @@ use async_channel::Receiver;
 use chrono::Utc;
 use mosquitto_rs::{Event, QoS};
 use serde::{Deserialize, Deserializer};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
 
 #[derive(Clone)]
 pub struct IotClient {
     client: mosquitto_rs::Client,
+    /// Kept up to date by the subscriber loop, and shared with every clone
+    connected: Arc<AtomicBool>,
 }
 
 impl IotClient {
+    /// Whether a command published now would reach Govee
+    pub fn is_connected(&self) -> bool {
+        self.connected.load(Ordering::Relaxed)
+    }
+
+    /// A client that has never been connected to anything, and a handle to
+    /// say whether it is
+    #[cfg(test)]
+    pub(crate) fn for_test(client: mosquitto_rs::Client) -> (Self, Arc<AtomicBool>) {
+        let connected = Arc::new(AtomicBool::new(true));
+        (
+            Self {
+                client,
+                connected: connected.clone(),
+            },
+            connected,
+        )
+    }
+
     pub fn is_device_compatible(&self, device: &DeviceEntry) -> bool {
         device.device_ext.device_settings.topic.is_some()
     }
@@ -256,6 +279,7 @@ struct IotSession {
     client: mosquitto_rs::Client,
     subscriptions: Receiver<Event>,
     acct: LoginAccountResponse,
+    connected: Arc<AtomicBool>,
 }
 
 pub async fn start_iot_client(
@@ -336,9 +360,11 @@ async fn connect_iot_client(
         .subscriber()
         .context("subscriber was already taken")?;
 
+    let connected = Arc::new(AtomicBool::new(true));
     state
         .set_iot_client(IotClient {
             client: client.clone(),
+            connected: connected.clone(),
         })
         .await;
 
@@ -346,6 +372,7 @@ async fn connect_iot_client(
         client,
         subscriptions,
         acct,
+        connected,
     })
 }
 
@@ -361,11 +388,14 @@ async fn run_iot_supervisor(args: UndocApiArguments, state: StateHandle, session
             client,
             subscriptions,
             acct,
+            connected,
         } = session;
-        match run_iot_subscriber(subscriptions, state.clone(), client, acct).await {
+        match run_iot_subscriber(subscriptions, state.clone(), client, acct, &connected).await {
             Ok(()) => log::warn!("IoT loop terminated"),
             Err(err) => log::error!("IoT loop failed: {err:#}"),
         }
+        // This client is finished, whether or not it saw a disconnect
+        connected.store(false, Ordering::Relaxed);
 
         // A session that stayed up for a while earns a quick restart; one
         // that died young backs off so that we can't spin against the
@@ -680,6 +710,7 @@ async fn run_iot_subscriber(
     state: StateHandle,
     client: mosquitto_rs::Client,
     acct: LoginAccountResponse,
+    connected: &AtomicBool,
 ) -> anyhow::Result<()> {
     let mut watch = ConnectionWatch::new(IOT_RECONNECT_GRACE);
     loop {
@@ -716,9 +747,11 @@ async fn run_iot_subscriber(
                 }
             }
             Event::Disconnected(reason) => {
+                connected.store(false, Ordering::Relaxed);
                 log::warn!("IoT disconnected with reason {reason}");
             }
             Event::Connected(status) => {
+                connected.store(true, Ordering::Relaxed);
                 log::info!("IoT (re)connected with status {status}");
 
                 client

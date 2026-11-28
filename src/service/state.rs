@@ -341,10 +341,28 @@ impl State {
         self.undoc_client.lock().await.clone()
     }
 
+    /// The AWS IoT client to send this device a command with. While its
+    /// connection is down and the Platform API can carry the command instead,
+    /// there is none.
+    async fn iot_for_command(&self, device: &Device) -> Option<IotClient> {
+        let iot = self.get_iot_client().await?;
+        if !iot.is_connected()
+            && device.http_device_info.is_some()
+            && self.get_platform_client().await.is_some()
+        {
+            log::info!("AWS IoT is disconnected, so it is not used to control {device}");
+            return None;
+        }
+        Some(iot)
+    }
+
     /// Returns what we need to talk to the device via IoT,
     /// if that is possible
     async fn iot_device<'a>(&self, device: &'a Device) -> Option<(IotClient, &'a DeviceEntry)> {
-        let iot = self.get_iot_client().await?;
+        let iot = self
+            .get_iot_client()
+            .await
+            .filter(IotClient::is_connected)?;
         let info = device.undoc_device_info.as_ref()?;
         iot.is_device_compatible(&info.entry)
             .then_some((iot, &info.entry))
@@ -550,7 +568,7 @@ impl State {
         }
 
         if device.iot_api_supported() {
-            if let Some(iot) = self.get_iot_client().await {
+            if let Some(iot) = self.iot_for_command(device).await {
                 if let Some(info) = &device.undoc_device_info {
                     log::info!("Using IoT API to set {device} light power state");
                     iot.set_power_state(&info.entry, on).await?;
@@ -583,7 +601,7 @@ impl State {
         }
 
         if device.iot_api_supported() {
-            if let Some(iot) = self.get_iot_client().await {
+            if let Some(iot) = self.iot_for_command(device).await {
                 if let Some(info) = &device.undoc_device_info {
                     log::info!("Using IoT API to set {device} power state");
                     iot.set_power_state(&info.entry, on).await?;
@@ -663,7 +681,7 @@ impl State {
         }
 
         if device.iot_api_supported() {
-            if let Some(iot) = self.get_iot_client().await {
+            if let Some(iot) = self.iot_for_command(device).await {
                 if let Some(info) = &device.undoc_device_info {
                     log::info!("Using IoT API to set {device} brightness");
                     iot.set_brightness(&info.entry, percent).await?;
@@ -704,7 +722,7 @@ impl State {
         }
 
         if device.iot_api_supported() {
-            if let Some(iot) = self.get_iot_client().await {
+            if let Some(iot) = self.iot_for_command(device).await {
                 if let Some(info) = &device.undoc_device_info {
                     log::info!("Using IoT API to set {device} color temperature");
                     iot.set_color_temperature(&info.entry, kelvin).await?;
@@ -786,7 +804,7 @@ impl State {
         (apply)(&mut params);
 
         if let Ok(command) = Base64HexBytes::encode_for_sku(&device.sku, &params) {
-            if let Some(iot) = self.get_iot_client().await {
+            if let Some(iot) = self.iot_for_command(device).await {
                 if let Some(info) = &device.undoc_device_info {
                     log::info!("Using IoT API to set {device} color");
                     iot.send_real(&info.entry, command.base64()).await?;
@@ -811,7 +829,7 @@ impl State {
                 param: value as u8,
             },
         ) {
-            if let Some(iot) = self.get_iot_client().await {
+            if let Some(iot) = self.iot_for_command(device).await {
                 if let Some(info) = &device.undoc_device_info {
                     iot.send_real(&info.entry, command.base64()).await?;
                     return Ok(());
@@ -862,7 +880,7 @@ impl State {
         }
 
         if device.iot_api_supported() {
-            if let Some(iot) = self.get_iot_client().await {
+            if let Some(iot) = self.iot_for_command(device).await {
                 if let Some(info) = &device.undoc_device_info {
                     log::info!("Using IoT API to set {device} color");
                     iot.set_color_rgb(&info.entry, r, g, b).await?;
@@ -963,7 +981,10 @@ impl State {
             return;
         };
 
-        let iot_available = self.get_iot_client().await.is_some();
+        let iot_available = self
+            .get_iot_client()
+            .await
+            .is_some_and(|iot| iot.is_connected());
 
         if device.pollable_via_iot() && iot_available {
             return;
@@ -1574,6 +1595,41 @@ mod tests {
         assert_eq!(deserialized.scenes.len(), 2);
         assert_eq!(deserialized.scenes[0].hint, Some("Deep greens".to_string()));
         assert_eq!(deserialized.scenes[1].hint, None);
+    }
+
+    #[tokio::test]
+    async fn commands_leave_a_disconnected_iot_client_for_the_platform_api() {
+        use std::sync::atomic::Ordering;
+
+        // Never dropped: destroying a mosquitto client hangs on Windows GNU
+        // builds.
+        let state = std::mem::ManuallyDrop::new(State::new());
+        let client = mosquitto_rs::Client::with_id("g2m-fallback-test", true).unwrap();
+        let (iot, connected) = IotClient::for_test(client);
+        state.set_iot_client(iot).await;
+
+        let mut device = Device::new("H6072", "AA:BB:CC:DD:EE:FF:11:22");
+        device.http_device_info = Some(crate::platform_api::HttpDeviceInfo {
+            sku: device.sku.clone(),
+            device: device.id.clone(),
+            device_name: "Test Light".to_string(),
+            device_type: crate::platform_api::DeviceType::Light,
+            capabilities: vec![],
+        });
+
+        connected.store(false, Ordering::Relaxed);
+        assert!(
+            state.iot_for_command(&device).await.is_some(),
+            "with no other way to reach the device, IoT is still tried"
+        );
+
+        state
+            .set_platform_client(crate::platform_api::GoveeApiClient::new("key"))
+            .await;
+        assert!(state.iot_for_command(&device).await.is_none());
+
+        connected.store(true, Ordering::Relaxed);
+        assert!(state.iot_for_command(&device).await.is_some());
     }
 
     #[tokio::test]
