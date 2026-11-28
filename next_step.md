@@ -15,6 +15,24 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
+## Built, not released
+
+On `more-work` and `community-revival`, tests passing, not on `main`:
+
+* Commands, polling and the follow-up poll use the Platform API while AWS IoT is
+  disconnected.
+* `segment_counts` (`GOVEE_SEGMENT_COUNTS`) corrects a light's number of
+  segments.
+
+At release: add both to the release notes, changelog and `TESTING.md`, and move
+wez#545, #567, #710 and #728 (and #543, extra segments only) to "Fixed here, not
+confirmed" in `docs/STATUS.md`. Not helped by a count: #473 and #733 (segments
+from 17 up change the whole string) and #701.
+
+Not known: whether Govee accepts segment numbers beyond the count it reports.
+
+---
+
 ## Status: fourteenth pre-release
 
 On 2026-11-28 the other forks of wez/govee2mqtt were scanned for changes never
@@ -29,9 +47,6 @@ Seen and not taken, to revisit if someone with the device or symptom appears:
 
 * A power-off sent just after a scene can be undone by the scene finishing
   (sabsteef/govee2mqtt@d43050489).
-* While AWS IoT is disconnected, commands fail instead of using the Platform API
-  (phischl/govee2mqtt@4e83cc1ef, second half). `get_iot_client` also answers
-  "is there a client", so it needs a separate method for commands.
 * Bundled SQLite is affected by RUSTSEC-2026-0459. It needs a crafted database
   and WAL file in the cache directory. Upgrading means replacing `sqlite-cache`,
   which holds the saved sign-in (mnbf9rca/govee2mqtt, branch
