@@ -703,7 +703,11 @@ async fn run_iot_subscriber(
                                 let mut device = state.device_mut(sku, device_id).await;
                                 merge_iot_packet(&mut device, sku, &packet);
                             }
-                            state.notify_of_state_change(device_id).await?;
+                            // Home Assistant's broker being away for a moment is
+                            // no reason to end the Govee session
+                            if let Err(err) = state.notify_of_state_change(device_id).await {
+                                log::warn!("Telling Home Assistant about {device_id}: {err:#}");
+                            }
                         }
                     }
                     Err(err) => {
