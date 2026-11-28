@@ -5,9 +5,12 @@ Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb6
 **This is a build for testers.** It passes its automated tests, but very little
 has been tried for real: earlier pre-releases ran on one setup with three lights
 on the LAN, and one contributor has since signed in to a real Govee account with
-two-step verification. On this build, what has been reported back is that
-effects work on an H607C controlled over the LAN, and that the web page matches
-the Home Assistant theme.
+two-step verification. Reported back since: effects work on an H607C over the
+LAN; the web page matches the Home Assistant theme; Rhythm and Stippling
+palettes work on an H60B2; **Unavailable When Offline** marked offline H601C
+lights unavailable (the way back is untested); moving from wez's add-on kept all
+121 entities on one setup (on the tenth pre-release); and it runs on a
+Raspberry Pi.
 Take a Home Assistant backup first. Moving from wez's add-on: see
 [the migration steps](README.md#migrating-from-wezgovee2mqtt-zero-entity-loss).
 What to try, and how to report it: [TESTING.md](TESTING.md).
@@ -27,8 +30,8 @@ References such as `wez#739` are issues and pull requests in
   ([#6](https://github.com/fleshinachair/govee2mqtt-revived/pull/6)). Needs the
   [`music_palette`](docs/MUSIC_MODE.md) setting and LAN control. Paulo sent the
   same data for Bloom to the lamp by hand and all three sections took the
-  colours; this build has not been tried on it, and Rhythm and Stippling were
-  not re-run.
+  colours. Since then Paulo has run Rhythm and Stippling through this build, and
+  both showed their colours and reacted to sound.
 
 ## New since the eleventh pre-release
 
@@ -47,9 +50,9 @@ a key they go through Govee's cloud, which was not affected.
 Paulo tried the new data with a script that builds the same bytes. The
 maintainer has since reported effects working on their own H607C with
 `2026.11.27.1931`; the H60B0 has not been tried with a released build.
-Choose the effect again after updating. The H6020 lays out
-its effects differently again and may have a similar fault; it has not been
-tried.
+Choose the effect again after updating. **The H6020 is not fixed:** it lays out
+its effects differently again, and Paulo found that without an API key they do
+nothing.
 
 Also: Paulo confirmed on a two-step verification account that upgrading from
 govee2mqtt-extended and pressing **Purge Caches** did not ask for a new code

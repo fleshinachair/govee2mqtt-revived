@@ -23,6 +23,12 @@ re-checked on the lamp with the classic frames, sent by hand.
 On this build the owner reported effects working on their H607C (LAN only, no
 API key, Wi-Fi software 1.03.08), which confirms the twelfth's H607C fix.
 
+Reported by others since (2026-11-27): Paulo confirmed Rhythm and Stippling on
+the H60B2 and found no working form for H6020 LAN scenes; a reporter on
+wez/govee2mqtt#551 confirmed `offline_unavailable` going unavailable (return not
+yet tested) and a 121-entity migration; another on wez/govee2mqtt#737 runs it on
+a Raspberry Pi (Tap-to-Run not mentioned).
+
 ## Earlier status: twelfth pre-release
 
 fleshinachair/govee2mqtt-revived#5 from Paulo Silveira: scene framing for the

@@ -70,14 +70,14 @@ New in the thirteenth pre-release:
 
 | You have | Try | Tell us |
 |---|---|---|
-| H60B2 | With `music_palette` on, send Bloom, Rhythm and Stippling [palettes](docs/MUSIC_MODE.md) | Whether all three sections show your colours and react to sound |
+| H60B2 | With `music_palette` on, send Bloom, Rhythm and Stippling [palettes](docs/MUSIC_MODE.md). Reported working on one lamp | Whether all three sections show your colours and react to sound |
 
 New in the twelfth pre-release. These need a setup **without** a Govee API key:
 
 | You have | Try | Tell us |
 |---|---|---|
 | H607C or H60B0 | Choose several effects, then the same names in the Govee app | Which you chose, and whether the two look the same |
-| H6020 | The same | Whether they differ; it may still be wrong |
+| H6020 | Nothing for now: effects are known not to work without an API key | |
 
 New in the eleventh pre-release:
 

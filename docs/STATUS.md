@@ -15,6 +15,7 @@ start of the report and the latest replies, and were not reproduced.
 | Problem | Issues |
 |---|---|
 | H607C scenes missing: they are listed on the owner's lamp, and a separate fault found later, where the wrong effect played, is fixed there too | [#286](https://github.com/wez/govee2mqtt/issues/286) |
+| Offline lights still shown as on (opt-in `offline_unavailable`): a reporter saw seven H601C become unavailable. Becoming available again is not yet tested | [#551](https://github.com/wez/govee2mqtt/issues/551) |
 
 ## Fixed here, not confirmed
 
@@ -24,7 +25,7 @@ start of the report and the latest replies, and were not reproduced.
 | Login, two-step verification, Tap-to-Run | [#627](https://github.com/wez/govee2mqtt/issues/627), [#633](https://github.com/wez/govee2mqtt/issues/633), [#647](https://github.com/wez/govee2mqtt/issues/647), [#682](https://github.com/wez/govee2mqtt/issues/682), [#702](https://github.com/wez/govee2mqtt/issues/702), [#737](https://github.com/wez/govee2mqtt/issues/737), [#745](https://github.com/wez/govee2mqtt/issues/745) |
 | Scenes and effects | [#666](https://github.com/wez/govee2mqtt/issues/666), [#722](https://github.com/wez/govee2mqtt/issues/722) |
 | MQTT and availability | [#110](https://github.com/wez/govee2mqtt/issues/110), [#227](https://github.com/wez/govee2mqtt/issues/227), [#572](https://github.com/wez/govee2mqtt/issues/572), [#659](https://github.com/wez/govee2mqtt/issues/659), [#661](https://github.com/wez/govee2mqtt/issues/661), [#686](https://github.com/wez/govee2mqtt/issues/686), [#712](https://github.com/wez/govee2mqtt/issues/712), [#719](https://github.com/wez/govee2mqtt/issues/719) |
-| Offline devices (opt-in setting) | [#465](https://github.com/wez/govee2mqtt/issues/465), [#509](https://github.com/wez/govee2mqtt/issues/509), [#551](https://github.com/wez/govee2mqtt/issues/551), [#563](https://github.com/wez/govee2mqtt/issues/563), [#359](https://github.com/wez/govee2mqtt/issues/359), [#387](https://github.com/wez/govee2mqtt/issues/387) |
+| Offline devices (opt-in setting) | [#465](https://github.com/wez/govee2mqtt/issues/465), [#509](https://github.com/wez/govee2mqtt/issues/509), [#563](https://github.com/wez/govee2mqtt/issues/563), [#359](https://github.com/wez/govee2mqtt/issues/359), [#387](https://github.com/wez/govee2mqtt/issues/387) |
 | Colour temperature | [#558](https://github.com/wez/govee2mqtt/issues/558), [#591](https://github.com/wez/govee2mqtt/issues/591), [#731](https://github.com/wez/govee2mqtt/issues/731), [#742](https://github.com/wez/govee2mqtt/issues/742) |
 | Models and features | [#116](https://github.com/wez/govee2mqtt/issues/116), [#186](https://github.com/wez/govee2mqtt/issues/186), [#343](https://github.com/wez/govee2mqtt/issues/343), [#416](https://github.com/wez/govee2mqtt/issues/416), [#456](https://github.com/wez/govee2mqtt/issues/456), [#577](https://github.com/wez/govee2mqtt/issues/577), [#605](https://github.com/wez/govee2mqtt/issues/605), [#621](https://github.com/wez/govee2mqtt/issues/621), [#634](https://github.com/wez/govee2mqtt/issues/634), [#561](https://github.com/wez/govee2mqtt/issues/561), [#684](https://github.com/wez/govee2mqtt/issues/684) |
 | Crash on non-English preset names | [#603](https://github.com/wez/govee2mqtt/issues/603), [#607](https://github.com/wez/govee2mqtt/issues/607), [#609](https://github.com/wez/govee2mqtt/issues/609) |
@@ -113,6 +114,9 @@ Govee gives no command for them.
   bundled MQTT library (libmosquitto 2.0.9). Reading its code did not explain the
   reported trace, and it has not been reproduced. Restarting the add-on clears it.
 * [#567](https://github.com/wez/govee2mqtt/issues/567): the segment count for H61E5 is unchanged.
+* H6020 without a Govee API key: effects chosen over the LAN do nothing. A
+  contributor tried five ways of sending them on their lamp and none was right
+  ([notes](FIELD_NOTES.md#scenes-over-the-lan)).
 
 ## Pull requests held back
 

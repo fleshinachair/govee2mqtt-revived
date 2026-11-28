@@ -69,20 +69,31 @@ and H60B0 rules are in `src/ble.rs`.
   reported effects working on a second H607C with `2026.11.27.1931`.
 - The H60B0 wraps them as `51`, a two-byte length, an `0a` block, then a second
   length-prefixed block. Dropping the first three bytes matched the cloud by eye
-  on one scene. What the second block does is not known.
+  on one scene. Later, on two scenes sent by hand the same way, the side ring
+  changed with the rest, and the cloud then made no visible change. The
+  third-party [ha-govee-led-ble](https://github.com/teh-hippo/ha-govee-led-ble)
+  specs, marked speculative, call the second block "ripple" (the side ring) and
+  use subtype `5a`; that form was also accepted and looked the same.
+- The H60B0's bottom white downlight stayed off during every scene, the cloud
+  one included.
 - On four `sceneType` 2 models the generic `02` looks right: sending the same
   scene through the cloud afterwards made no visible change (H61E5 "Forest" and
   "Fire", H60B2 "Forest", H8057 "Ocean", H7025 "Christmas"; judged by eye).
 - Some libraries give one name two `lightEffects`, which the Platform API lists
   as two scenes (H7025 "Christmas-A" and "Christmas-B"). Choosing by name over
   the LAN gives the first.
-- Not tried: the H6020 (`sceneType` 5, starting `50`) and the H6009 (type 1).
+- H6020 (`sceneType` 5, `50`, a two-byte little-endian length, then the body):
+  **no working form found.** Ignored: `02` plus parameters, parameters unchanged,
+  `58` plus the complete parameters, and `58` plus the body without the header.
+  `58` replacing the leading `50` was accepted but played a different animation.
+- Not tried: the H6009 (`sceneType` 1).
 
 ## Devices
 
 - A device added to the Govee account while the bridge was running (H61E5,
   then H8057) got no entities until a restart, on a build without
-  `watch_for_late_devices`. Not retested here.
+  `watch_for_late_devices`. On this fork, an H6020 that joined the LAN while the
+  bridge was running was added without a restart (`2026.11.27.1931`).
 - White ranges outside what the Platform API declares for a model black the
   light out instead of clamping (H60B0). Prefer the declared range in a quirk
   over the generic 2000-9000 K.
