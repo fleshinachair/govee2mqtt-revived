@@ -15,6 +15,31 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
+## Unreleased: fixes from other forks
+
+On 2026-11-28 the other forks of wez/govee2mqtt were scanned for changes never
+offered upstream. Adapted, with their authors on the commits: unreadable IoT
+frames and a Home Assistant broker outage ending the IoT loop (phischl), a
+sign-in refused in the reply body (MatrixJson), a snapshot replacing a scene of
+the same name (bsaverino), and IoT for H6004, H6008, H6009 and H612B
+(BrianCompau). Tests pass; none is confirmed on hardware here.
+
+Seen and not taken, to revisit if someone with the device or symptom appears:
+
+* LAN commands wait up to 5 s for an exact read-back, which some lamps never
+  give for brightness or colour temperature (kk-sonata/govee2mqtt@c82058bb0).
+* A power-off sent just after a scene can be undone by the scene finishing
+  (sabsteef/govee2mqtt@d43050489).
+* While AWS IoT is disconnected, commands fail instead of using the Platform API
+  (phischl/govee2mqtt@4e83cc1ef, second half).
+* Bundled SQLite is affected by RUSTSEC-2026-0459. It needs a crafted database
+  and WAL file in the cache directory. Upgrading means replacing `sqlite-cache`
+  (mnbf9rca/govee2mqtt, branch `replace-sqlite-cache`).
+* Features: H7105 fan modes (lsjohnston626), H7129 purifier (skwash), H5192
+  meat thermometer (IamTheLoki), brightness-only segments (Felix-Chaos).
+
+---
+
 ## Status: thirteenth pre-release
 
 fleshinachair/govee2mqtt-revived#6: H60B2 music palette profiles. Only Bloom was
