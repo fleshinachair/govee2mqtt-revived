@@ -1,5 +1,19 @@
 # Changelog
 
+## Fourteenth pre-release
+
+Fixes adapted from other forks:
+
+- LAN brightness and colour temperature commands no longer wait five seconds for
+  a rounded reply (kk-sonata)
+- AWS IoT: an unreadable entry or a Home Assistant broker restart no longer
+  loses a status or the connection (phischl)
+- A sign-in that Govee refuses is discarded (Jason Willett)
+- A snapshot no longer replaces a scene of the same name (bsaverino)
+- H6004, H6008, H6009 and H612B can use AWS IoT (BrianCompau)
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Thirteenth pre-release
 
 - Music colour palettes on the H60B2: Bloom, Rhythm and Stippling (by Paulo

@@ -196,6 +196,14 @@ Contributions to this fork:
   H60B2 music palettes
   ([#6](https://github.com/fleshinachair/govee2mqtt-revived/pull/6))
 
+Fixes adapted from other forks of wez/govee2mqtt:
+
+* [phischl](https://github.com/phischl): AWS IoT status and connection handling
+* [Jason Willett](https://github.com/MatrixJson): refused sign-ins
+* [Brad](https://github.com/bsaverino): snapshots sharing a scene's name
+* [BrianCompau](https://github.com/BrianCompau): H6004, H6008, H6009 and H612B
+* [kk-sonata](https://github.com/kk-sonata): slow LAN commands
+
 Authors of open upstream pull requests applied here:
 
 * [UPEngineer](https://github.com/UPEngineer): Tap-to-Run shortcuts

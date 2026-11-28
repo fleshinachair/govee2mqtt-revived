@@ -1,12 +1,12 @@
-# Govee to MQTT (Revived): thirteenth pre-release
+# Govee to MQTT (Revived): fourteenth pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
 **This is a build for testers.** It passes its automated tests, but very little
 has been tried for real: earlier pre-releases ran on one setup with three lights
 on the LAN, and one contributor has since signed in to a real Govee account with
-two-step verification. Reported back since: effects work on an H607C over the
-LAN; the web page matches the Home Assistant theme; Rhythm and Stippling
+two-step verification. Reported back on recent builds: effects work on an H607C
+over the LAN; the web page matches the Home Assistant theme; Rhythm and Stippling
 palettes work on an H60B2; **Unavailable When Offline** marked offline H601C
 lights unavailable (the way back is untested); moving from wez's add-on kept all
 121 entities on one setup (on the tenth pre-release); and it runs on a
@@ -22,6 +22,27 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the thirteenth pre-release
+
+Fixes found in other forks of wez/govee2mqtt, adapted here with their authors on
+the commits. They pass the automated tests; **none has been confirmed on this
+fork with real hardware.**
+
+* **LAN lights:** a brightness or colour temperature command could take five
+  seconds, delaying the next one, on a lamp that reports the value slightly
+  rounded. By [kk-sonata](https://github.com/kk-sonata).
+* **Govee account:** one unreadable entry in a status message lost the whole
+  update, and a restart of Home Assistant's MQTT broker could tear down the live
+  connection to Govee. By [phischl](https://github.com/phischl).
+* **Govee account:** if Govee refused the saved sign-in in a certain way, for
+  example after a password change, the bridge kept it and could fail at every
+  start. By [Jason Willett](https://github.com/MatrixJson).
+* **Scenes:** with a Govee API key, a snapshot with the same name as a scene was
+  applied instead of the scene. By [Brad](https://github.com/bsaverino).
+* **H6004, H6008, H6009 bulbs and the H612B strip** can now be controlled over
+  AWS IoT with a Govee account, instead of only through the slower, rate-limited
+  Platform API. By [BrianCompau](https://github.com/BrianCompau).
 
 ## New since the twelfth pre-release
 

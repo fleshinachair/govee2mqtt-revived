@@ -66,6 +66,15 @@ New in the fourth pre-release:
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 
+New in the fourteenth pre-release:
+
+| You have | Try | Tell us |
+|---|---|---|
+| Any light on the LAN | Change brightness and colour temperature several times in a row | Whether each takes effect promptly, and the value shown is right |
+| H6004, H6008, H6009 or H612B and a Govee account | Control it | Whether it responds quickly, and the white range looks right |
+| A snapshot with the same name as a scene | Choose that name | Whether the scene is applied |
+| A Govee account | Restart the MQTT broker | Whether the log shows a new AWS IoT connection |
+
 New in the thirteenth pre-release:
 
 | You have | Try | Tell us |
