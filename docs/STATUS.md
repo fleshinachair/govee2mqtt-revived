@@ -41,6 +41,7 @@ start of the report and the latest replies, and were not reproduced.
 | Scene list that could not be read | [#324](https://github.com/wez/govee2mqtt/issues/324) |
 | Music mode palettes | [#705](https://github.com/wez/govee2mqtt/issues/705) |
 | Project maintenance | [#700](https://github.com/wez/govee2mqtt/issues/700), [#746](https://github.com/wez/govee2mqtt/issues/746) |
+| Wrong number of segments (new setting; for #543 it only removes the extra ones) | [#543](https://github.com/wez/govee2mqtt/issues/543), [#545](https://github.com/wez/govee2mqtt/issues/545), [#567](https://github.com/wez/govee2mqtt/issues/567), [#710](https://github.com/wez/govee2mqtt/issues/710), [#728](https://github.com/wez/govee2mqtt/issues/728) |
 | Number sliders Home Assistant rejected | [#154](https://github.com/wez/govee2mqtt/issues/154), [#171](https://github.com/wez/govee2mqtt/issues/171) |
 | Older lights ignoring commands sent over AWS IoT (opt-in setting) | [#113](https://github.com/wez/govee2mqtt/issues/113), [#125](https://github.com/wez/govee2mqtt/issues/125), [#152](https://github.com/wez/govee2mqtt/issues/152), [#319](https://github.com/wez/govee2mqtt/issues/319), [#340](https://github.com/wez/govee2mqtt/issues/340), [#364](https://github.com/wez/govee2mqtt/issues/364) |
 | Heaters losing Auto Stop (a new switch) | [#84](https://github.com/wez/govee2mqtt/issues/84), [#131](https://github.com/wez/govee2mqtt/issues/131) |
@@ -91,7 +92,7 @@ Govee gives no command for them.
 
 | Problem | Issues |
 |---|---|
-| Wrong segment count, or segments that do not respond | [#473](https://github.com/wez/govee2mqtt/issues/473), [#543](https://github.com/wez/govee2mqtt/issues/543), [#545](https://github.com/wez/govee2mqtt/issues/545), [#701](https://github.com/wez/govee2mqtt/issues/701), [#710](https://github.com/wez/govee2mqtt/issues/710), [#728](https://github.com/wez/govee2mqtt/issues/728), [#733](https://github.com/wez/govee2mqtt/issues/733) |
+| Segments that do not respond, or change the whole light | [#473](https://github.com/wez/govee2mqtt/issues/473), [#701](https://github.com/wez/govee2mqtt/issues/701), [#733](https://github.com/wez/govee2mqtt/issues/733) |
 | Multi-outlet plugs appear as one switch | [#65](https://github.com/wez/govee2mqtt/issues/65), [#332](https://github.com/wez/govee2mqtt/issues/332), [#443](https://github.com/wez/govee2mqtt/issues/443) |
 | Tap-to-Run listed but does nothing useful | [#406](https://github.com/wez/govee2mqtt/issues/406), [#523](https://github.com/wez/govee2mqtt/issues/523), [#635](https://github.com/wez/govee2mqtt/issues/635) |
 | Govee refuses some scenes | [#582](https://github.com/wez/govee2mqtt/issues/582), [#596](https://github.com/wez/govee2mqtt/issues/596) |
@@ -114,7 +115,6 @@ Govee gives no command for them.
 * [#749](https://github.com/wez/govee2mqtt/issues/749): high processor use after a broker restart. It happens inside the
   bundled MQTT library (libmosquitto 2.0.9). Reading its code did not explain the
   reported trace, and it has not been reproduced. Restarting the add-on clears it.
-* [#567](https://github.com/wez/govee2mqtt/issues/567): the segment count for H61E5 is unchanged.
 * H6020 without a Govee API key: effects chosen over the LAN do nothing. A
   contributor tried five ways of sending them on their lamp and none was right
   ([notes](FIELD_NOTES.md#scenes-over-the-lan)).

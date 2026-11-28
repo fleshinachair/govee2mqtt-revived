@@ -198,7 +198,8 @@ Contributions to this fork:
 
 Fixes adapted from other forks of wez/govee2mqtt:
 
-* [phischl](https://github.com/phischl): AWS IoT status and connection handling
+* [phischl](https://github.com/phischl): AWS IoT status and connection handling,
+  and the idea of using the Platform API while AWS IoT is down
 * [Jason Willett](https://github.com/MatrixJson): refused sign-ins
 * [Brad](https://github.com/bsaverino): snapshots sharing a scene's name
 * [BrianCompau](https://github.com/BrianCompau): H6004, H6008, H6009 and H612B

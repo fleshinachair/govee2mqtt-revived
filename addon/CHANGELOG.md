@@ -1,5 +1,13 @@
 # Changelog
 
+## Fifteenth pre-release
+
+- New setting segment_counts, such as H612D=20, for lights shown with the wrong
+  number of segments
+- While AWS IoT is disconnected, commands use the Platform API where possible
+
+Details: https://github.com/fleshinachair/govee2mqtt-revived/blob/main/RELEASE_NOTES.md
+
 ## Fourteenth pre-release
 
 Fixes adapted from other forks:

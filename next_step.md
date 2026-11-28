@@ -15,25 +15,20 @@ mappings come from reading issue text and code, not from reproducing bugs.
 
 ---
 
-## Built, not released
+## Status: fifteenth pre-release
 
-On `more-work` and `community-revival`, tests passing, not on `main`:
+On 2026-11-28: commands, polling and the follow-up poll use the Platform API
+while AWS IoT is disconnected, and `segment_counts` (`GOVEE_SEGMENT_COUNTS`)
+corrects a light's number of segments. Tests pass; neither is confirmed on
+hardware.
 
-* Commands, polling and the follow-up poll use the Platform API while AWS IoT is
-  disconnected.
-* `segment_counts` (`GOVEE_SEGMENT_COUNTS`) corrects a light's number of
-  segments.
-
-At release: add both to the release notes, changelog and `TESTING.md`, and move
-wez#545, #567, #710 and #728 (and #543, extra segments only) to "Fixed here, not
-confirmed" in `docs/STATUS.md`. Not helped by a count: #473 and #733 (segments
-from 17 up change the whole string) and #701.
-
-Not known: whether Govee accepts segment numbers beyond the count it reports.
+Not helped by a segment count: wez#473 and #733 (segments from 17 up change the
+whole string) and #701. Not known: whether Govee accepts segment numbers beyond
+the count it reports.
 
 ---
 
-## Status: fourteenth pre-release
+## Earlier status: fourteenth pre-release
 
 On 2026-11-28 the other forks of wez/govee2mqtt were scanned for changes never
 offered upstream. Adapted, with their authors on the commits: unreadable IoT

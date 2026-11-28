@@ -1,4 +1,4 @@
-# Govee to MQTT (Revived): fourteenth pre-release
+# Govee to MQTT (Revived): fifteenth pre-release
 
 Based on [wez/govee2mqtt](https://github.com/wez/govee2mqtt) `2026.03.25-ab9deb66`.
 
@@ -22,6 +22,21 @@ cannot recover by itself, and relies on being restarted.
 
 References such as `wez#739` are issues and pull requests in
 [wez/govee2mqtt](https://github.com/wez/govee2mqtt).
+
+## New since the fourteenth pre-release
+
+**Neither has been tried on real hardware.**
+
+* **Wrong number of segments:** a new
+  [`segment_counts`](docs/CONFIG.md#wrong-number-of-segments) setting, such as
+  `H612D=20`, gives a light the number of segments it really has (wez#545,
+  wez#567, wez#710, wez#728; for wez#543 it only removes the extra ones). It is
+  not known whether Govee accepts segments beyond the number it reports, and it
+  does not help where setting one segment changes the whole light.
+* **AWS IoT outages:** while the bridge's connection to AWS IoT is down,
+  commands that the Platform API can also carry go that way instead of failing.
+  This needs the API key. The idea is
+  [phischl](https://github.com/phischl)'s.
 
 ## New since the thirteenth pre-release
 

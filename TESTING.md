@@ -66,6 +66,13 @@ New in the fourth pre-release:
 | Any device | Open the web page, choose **Report a problem** | Whether the report loads, shows nothing private, and the GitHub page opens filled in |
 | Tap-to-Run shortcuts | Run one | Whether it still works |
 
+New in the fifteenth pre-release:
+
+| You have | Try | Tell us |
+|---|---|---|
+| A light shown with the wrong number of segments | Set `segment_counts`, such as `H612D=20`, restart, then colour the first and last segment | Whether each changes the right part, and any error in the log |
+| A Govee account and an API key, and a log that says AWS IoT disconnected | Control a light that has no LAN control while it is disconnected | Whether the command works |
+
 New in the fourteenth pre-release:
 
 | You have | Try | Tell us |
