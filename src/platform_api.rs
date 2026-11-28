@@ -130,9 +130,12 @@ fn build_music_mode_payload(
     Some(payload)
 }
 
+/// A snapshot is a saved state of the device, and can have the same name as a
+/// scene. `snapshots` says which of the two kinds to look in.
 fn scene_value_from_capabilities<'a>(
     capabilities: &'a [DeviceCapability],
     scene: &str,
+    snapshots: bool,
 ) -> Option<(&'a DeviceCapability, JsonValue)> {
     capabilities.iter().find_map(|capability| {
         if !matches!(
@@ -141,6 +144,9 @@ fn scene_value_from_capabilities<'a>(
                 | DeviceCapabilityKind::DynamicSetting
                 | DeviceCapabilityKind::Mode
         ) {
+            return None;
+        }
+        if (capability.instance == "snapshot") != snapshots {
             return None;
         }
 
@@ -521,13 +527,27 @@ impl GoveeApiClient {
         // authoritative enough to control directly. Resolve it first so a
         // normal effect command does not need supplemental scene-catalog I/O.
         if let Some((capability, value)) =
-            scene_value_from_capabilities(&device.capabilities, scene)
+            scene_value_from_capabilities(&device.capabilities, scene, false)
         {
             return self.control_device(device, capability, value).await;
         }
 
-        let caps = self.get_scene_caps(device).await?;
-        if let Some((capability, value)) = scene_value_from_capabilities(&caps, scene) {
+        // A scene wins over a snapshot of the same name, so the scene catalog
+        // is searched before settling for a snapshot
+        let snapshot = scene_value_from_capabilities(&device.capabilities, scene, true);
+        let caps = match self.get_scene_caps(device).await {
+            Ok(caps) => caps,
+            Err(err) => match snapshot {
+                Some((capability, value)) => {
+                    return self.control_device(device, capability, value).await;
+                }
+                None => return Err(err),
+            },
+        };
+        if let Some((capability, value)) = scene_value_from_capabilities(&caps, scene, false)
+            .or(snapshot)
+            .or_else(|| scene_value_from_capabilities(&caps, scene, true))
+        {
             return self.control_device(device, capability, value).await;
         }
         anyhow::bail!("Scene '{scene}' is not available for this device");
@@ -1528,6 +1548,29 @@ impl GoveeApiClient {
 #[cfg(test)]
 pub(crate) mod test {
     use super::*;
+
+    #[test]
+    fn a_snapshot_does_not_stand_in_for_a_scene_of_the_same_name() {
+        let capability = |instance: &str, value: u64| -> DeviceCapability {
+            serde_json::from_value(serde_json::json!({
+                "type": "devices.capabilities.dynamic_scene",
+                "instance": instance,
+                "parameters": {
+                    "dataType": "ENUM",
+                    "options": [{"name": "Every day", "value": value}],
+                },
+            }))
+            .unwrap()
+        };
+        let capabilities = [capability("snapshot", 1), capability("diyScene", 2)];
+
+        let found = |snapshots| {
+            scene_value_from_capabilities(&capabilities, "every day", snapshots)
+                .map(|(capability, value)| (capability.instance.clone(), value))
+        };
+        assert_eq!(found(false), Some(("diyScene".to_string(), 2.into())));
+        assert_eq!(found(true), Some(("snapshot".to_string(), 1.into())));
+    }
     use serde::Deserialize;
 
     #[derive(Debug, Deserialize)]
