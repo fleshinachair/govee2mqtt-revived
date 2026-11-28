@@ -654,8 +654,11 @@ impl State {
         if let Some(lan_dev) = &device.lan_device {
             log::info!("Using LAN API to set {device} brightness");
             lan_dev.send_brightness(percent).await?;
-            self.poll_lan_api(lan_dev, |status| status.brightness == percent)
-                .await?;
+            let sent = Instant::now();
+            self.poll_lan_api(lan_dev, |status| {
+                reads_back(status.brightness.into(), percent.into(), 1, sent.elapsed())
+            })
+            .await?;
             return Ok(());
         }
 
@@ -692,8 +695,11 @@ impl State {
             self.device_mut(&device.sku, &device.id)
                 .await
                 .set_active_scene(None);
-            self.poll_lan_api(lan_dev, |status| status.color_temperature_kelvin == kelvin)
-                .await?;
+            let sent = Instant::now();
+            self.poll_lan_api(lan_dev, |status| {
+                reads_back(status.color_temperature_kelvin, kelvin, 100, sent.elapsed())
+            })
+            .await?;
             return Ok(());
         }
 
@@ -1287,6 +1293,17 @@ impl State {
     }
 }
 
+/// How long to hold out for the exact value before a near one will do
+const EXACT_READ_BACK: Duration = Duration::from_secs(1);
+
+/// Whether a value read back from a device confirms the one that was sent.
+/// Some lamps report brightness or color temperature slightly rounded, and
+/// insisting on equality holds up the next command until the wait times out.
+/// A near value is not taken at once, because it may be the old one.
+fn reads_back(actual: u32, wanted: u32, tolerance: u32, waited: Duration) -> bool {
+    actual == wanted || (waited >= EXACT_READ_BACK && actual.abs_diff(wanted) <= tolerance)
+}
+
 fn retain_executable_scenes(categories: &mut Vec<SceneCatalogCategory>) {
     for category in categories.iter_mut() {
         category.scenes.retain(|scene| !scene.name.is_empty());
@@ -1506,6 +1523,18 @@ mod tests {
         ];
         let result = sort_and_dedup_scenes(scenes);
         assert_eq!(result, vec!["aurora", "Blaze", "Sunset"]);
+    }
+
+    #[test]
+    fn a_rounded_read_back_is_accepted_only_after_waiting() {
+        let soon = Duration::from_millis(100);
+        let later = EXACT_READ_BACK;
+        assert!(reads_back(50, 50, 1, soon));
+        assert!(!reads_back(49, 50, 1, soon));
+        assert!(reads_back(49, 50, 1, later));
+        assert!(!reads_back(48, 50, 1, later));
+        assert!(reads_back(4000, 4100, 100, later));
+        assert!(!reads_back(4000, 4101, 100, later));
     }
 
     #[test]
