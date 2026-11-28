@@ -9,7 +9,7 @@ use anyhow::Context;
 use async_channel::Receiver;
 use chrono::Utc;
 use mosquitto_rs::{Event, QoS};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use std::time::Duration;
 use tokio::time::timeout;
 
@@ -506,19 +506,38 @@ impl StateUpdate {
 #[derive(Deserialize, Debug)]
 #[allow(unused)]
 struct OpData {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "readable_frames")]
     command: Vec<Base64HexBytes>,
 
     // The next 4 fields are sourced from H6199
     // <https://github.com/wez/govee2mqtt/issues/36>
-    #[serde(rename = "modeValue", default)]
+    #[serde(rename = "modeValue", default, deserialize_with = "readable_frames")]
     mode_value: Vec<Base64HexBytes>,
-    #[serde(rename = "sleepValue", default)]
+    #[serde(rename = "sleepValue", default, deserialize_with = "readable_frames")]
     sleep_value: Vec<Base64HexBytes>,
-    #[serde(rename = "wakeupValue", default)]
+    #[serde(rename = "wakeupValue", default, deserialize_with = "readable_frames")]
     wakeup_value: Vec<Base64HexBytes>,
-    #[serde(rename = "timerValue", default)]
+    #[serde(rename = "timerValue", default, deserialize_with = "readable_frames")]
     timer_value: Vec<Base64HexBytes>,
+}
+
+/// Keep the frames that can be read and skip the rest. An H7020 was seen to
+/// send an entry that is not base64, and failing on it lost the whole status.
+fn readable_frames<'de, D>(deserializer: D) -> Result<Vec<Base64HexBytes>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let entries = Vec::<serde_json::Value>::deserialize(deserializer)?;
+    Ok(entries
+        .into_iter()
+        .filter_map(|entry| match Base64HexBytes::deserialize(entry) {
+            Ok(frame) => Some(frame),
+            Err(err) => {
+                log::debug!("Skipping an IoT frame that cannot be read: {err}");
+                None
+            }
+        })
+        .collect())
 }
 
 impl Packet {
@@ -753,6 +772,27 @@ mod test {
         },
         "op": {"command": ["qgUVAAAAAAAAAAAAAAAAAAAAALo="]}
     }"#;
+
+    /// The first entry is what an H7020 sent, as recorded by phischl
+    #[test]
+    fn an_unreadable_frame_does_not_lose_the_status() {
+        let packet: Packet = serde_json::from_str(
+            r#"{
+                "sku": "H7020",
+                "device": "AA:BB:CC:DD:EE:FF:00:11",
+                "state": {"onOff": 1, "brightness": 50},
+                "op": {"command": [
+                    "dfdebb7e6883b26be49d8dfa109",
+                    "qgUVAAAAAAAAAAAAAAAAAAAAALo=",
+                    17
+                ]}
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(packet.state.brightness, Some(50));
+        assert_eq!(packet.op.map(|op| op.command.len()), Some(1));
+    }
 
     #[test]
     fn parses_top_level_mode_from_status_push() {
