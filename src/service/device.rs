@@ -57,6 +57,29 @@ fn sensor_poll_interval(setting: Option<&str>) -> chrono::Duration {
 /// longer exist, so deleting them in Home Assistant alone doesn't last.
 const IGNORE_DEVICES_ENV_VAR: &str = "GOVEE_IGNORE_DEVICES";
 
+/// How many segments chosen devices really have, as `model-or-device=count`
+/// entries separated by commas. Govee reports the wrong number for some.
+const SEGMENT_COUNTS_ENV_VAR: &str = "GOVEE_SEGMENT_COUNTS";
+
+/// More than any Govee light has, and few enough that a typing slip cannot
+/// flood Home Assistant with entities
+const MAX_SEGMENT_COUNT: u32 = 128;
+
+/// Replace the number of segments with the user's own, keeping the first index.
+/// A device with no segment support gains none: there would be no way to
+/// command them.
+fn with_segment_count(
+    reported: Option<std::ops::Range<u32>>,
+    wanted: Option<u32>,
+) -> Option<std::ops::Range<u32>> {
+    let reported = reported?;
+    match wanted {
+        None => Some(reported),
+        Some(0) => None,
+        Some(count) => Some(reported.start..reported.start.saturating_add(count)),
+    }
+}
+
 #[derive(Default, Clone, Debug)]
 pub struct Device {
     pub sku: String,
@@ -1021,7 +1044,40 @@ impl Device {
         self.lan_device.is_some() && self.local_segment_protocol().is_some()
     }
 
+    /// The segments to offer: what is reported, unless the user says otherwise
     pub fn supports_segmented_rgb(&self) -> Option<std::ops::Range<u32>> {
+        let wanted = std::env::var(SEGMENT_COUNTS_ENV_VAR)
+            .ok()
+            .and_then(|list| self.segment_count_in(&list));
+        with_segment_count(self.reported_segments(), wanted)
+    }
+
+    /// The count given for this device. An entry naming the device itself
+    /// beats one naming its model.
+    fn segment_count_in(&self, list: &str) -> Option<u32> {
+        let mut for_model = None;
+        for entry in list.split(',').map(str::trim).filter(|e| !e.is_empty()) {
+            let parsed = entry.rsplit_once('=').and_then(|(who, count)| {
+                let count: u32 = count.trim().parse().ok()?;
+                (count <= MAX_SEGMENT_COUNT).then_some((who.trim(), count))
+            });
+            let Some((who, count)) = parsed else {
+                log::warn!(
+                    "ignoring {entry:?} in {SEGMENT_COUNTS_ENV_VAR}: expected \
+                     something like H612D=20, with at most {MAX_SEGMENT_COUNT}"
+                );
+                continue;
+            };
+            if who.eq_ignore_ascii_case(&self.sku) {
+                for_model = Some(count);
+            } else if self.is_named_in(who) {
+                return Some(count);
+            }
+        }
+        for_model
+    }
+
+    fn reported_segments(&self) -> Option<std::ops::Range<u32>> {
         if let Some(range) = self
             .http_device_info
             .as_ref()
@@ -1058,6 +1114,41 @@ mod test {
         assert_eq!(seconds(Some("5")), 60);
         assert_eq!(seconds(Some("-1")), 60);
         assert_eq!(seconds(Some("86400")), 900);
+    }
+
+    /// wez/govee2mqtt#545, #567, #710 and #728
+    #[test]
+    fn segment_counts_can_be_given_by_model_or_device() {
+        let device = Device::new("H612D", "AA:BB:CC:DD:EE:FF:11:22");
+        let count = |list| device.segment_count_in(list);
+
+        assert_eq!(count("H612D=20"), Some(20));
+        assert_eq!(count(" h612d = 20 "), Some(20));
+        assert_eq!(count("H7094=4, H612D=20"), Some(20));
+        assert_eq!(count("AABBCCDDEEFF1122=7"), Some(7));
+        // The device itself beats its model, in either order
+        assert_eq!(count("H612D=20,AA:BB:CC:DD:EE:FF:11:22=7"), Some(7));
+        assert_eq!(count("AA:BB:CC:DD:EE:FF:11:22=7,H612D=20"), Some(7));
+        assert_eq!(count("H612D=0"), Some(0));
+
+        assert_eq!(count(""), None);
+        assert_eq!(count("H7094=4"), None);
+        assert_eq!(count("H612D"), None);
+        assert_eq!(count("H612D=many"), None);
+        assert_eq!(count("H612D=-1"), None);
+        assert_eq!(count("H612D=100000"), None);
+        // One bad entry does not lose the others
+        assert_eq!(count("H612D=many,H612D=20"), Some(20));
+    }
+
+    #[test]
+    fn a_segment_count_only_changes_how_many_there_are() {
+        assert_eq!(with_segment_count(Some(0..10), None), Some(0..10));
+        assert_eq!(with_segment_count(Some(0..10), Some(20)), Some(0..20));
+        assert_eq!(with_segment_count(Some(0..15), Some(4)), Some(0..4));
+        assert_eq!(with_segment_count(Some(1..16), Some(4)), Some(1..5));
+        assert_eq!(with_segment_count(Some(0..10), Some(0)), None);
+        assert_eq!(with_segment_count(None, Some(20)), None);
     }
 
     /// wez/govee2mqtt#333, #436 and #721

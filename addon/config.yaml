@@ -65,4 +65,5 @@ schema:
   disable_platform_mqtt: "bool?"
   ignore_devices: "str?"
   no_iot_control: "str?"
+  segment_counts: "str?"
   sensor_poll_interval: "int(60,900)?"

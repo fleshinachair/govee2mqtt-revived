@@ -32,6 +32,11 @@ configuration:
       Models (such as H6159) or device IDs, separated by commas, to control
       without AWS IoT. Try it if a light without LAN control shows commands as
       sent but does not react. Needs the API key.
+  segment_counts:
+    name: Segment Counts
+    description: >-
+      Only if a light shows the wrong number of segments. Model or device ID,
+      then the right number, separated by commas, such as H612D=20,H7094=4.
   sensor_poll_interval:
     name: Sensor Reading Interval (s)
     description: >-

@@ -155,6 +155,11 @@ if bashio::config.has_value no_iot_control ; then
   export GOVEE_NO_IOT_CONTROL
 fi
 
+if bashio::config.has_value segment_counts ; then
+  GOVEE_SEGMENT_COUNTS="$(bashio::config segment_counts)"
+  export GOVEE_SEGMENT_COUNTS
+fi
+
 if bashio::config.has_value sensor_poll_interval ; then
   GOVEE_SENSOR_POLL_INTERVAL="$(bashio::config sensor_poll_interval)"
   export GOVEE_SENSOR_POLL_INTERVAL

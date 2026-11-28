@@ -208,6 +208,24 @@ count against Govee's request limit. LAN control, where a device has it, is
 still used first. A few model-specific features, such as the H1270's separate
 lights, are only possible over AWS IoT and still use it.
 
+## Wrong number of segments
+
+Govee reports too many or too few segments for some lights. You can give the
+right number.
+
+|ENV|App Config|Default|Purpose|
+|---|----------|-------|-------|
+|`GOVEE_SEGMENT_COUNTS=H612D=20,H7094=4`|`segment_counts`|*(Govee's count)*|Model or device ID and its number of segments, from 0 to 128, separated by commas|
+
+* An entry for a device ID beats one for its model. `0` removes the segments.
+* It only works on lights that already have segment entities.
+* After a restart of the bridge, extra segments are added. Segments you removed
+  stay in Home Assistant as unavailable once Home Assistant has restarted too,
+  and you can delete them under the MQTT integration.
+* Segments beyond the number Govee reports may be refused by Govee. The bridge
+  log then shows the error.
+* It does not help where segments change the whole light instead of one part.
+
 ## Heaters and Auto Stop
 
 Govee switches a heater's Auto Stop off whenever its target temperature is set
