@@ -272,6 +272,11 @@ fn load_quirks() -> HashMap<String, Quirk> {
         Quirk::light("H6006", BULB),
         Quirk::light("H600D", BULB),
         Quirk::light("H601B", BULB),
+        // The same, reported by an owner running these bulbs and strips
+        Quirk::light("H6004", BULB).with_color_temp_range(2700, 6500),
+        Quirk::light("H6008", BULB),
+        Quirk::light("H6009", BULB),
+        Quirk::light("H612B", STRIP).with_color_temp_range(2700, 6500),
         // DreamView G1 Pro: commands over the Platform API are sometimes lost.
         // <https://github.com/wez/govee2mqtt/issues/740>
         Quirk::light("H604A", TV_BACK),
@@ -555,6 +560,10 @@ mod test {
             ("H6006", false),
             ("H600D", false),
             ("H601B", false),
+            ("H6004", false),
+            ("H6008", false),
+            ("H6009", false),
+            ("H612B", false),
             ("H6039", true),
             ("H616D", true),
         ] {
